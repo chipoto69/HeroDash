@@ -530,47 +530,112 @@ print(int(psutil.virtual_memory().percent))
     printf "MEM: ${WHITE}%3s%%${NC}" "$mem"
 }
 
-# Agents & Processes Section (left)
+# Enhanced Agents & Live Workflows Section (left)
 update_agents_section() {
     local row=15
     local col=2
     move_cursor $row $col
-    echo -e "${CYAN}[ AGENTS & PROCESSES ]${NC}"
+    echo -e "${CYAN}[ AGENT COORDINATION & WORKFLOWS ]${NC}"
 
-    if [ -f "$AGENTS_STATUS" ]; then
-        local data=$(cat "$AGENTS_STATUS" 2>/dev/null)
-        local total=$(echo "$data" | (jq -r '.total_agents // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_agents',0))" 2>/dev/null || echo 0))
-        local models=$(echo "$data" | (jq -r '.buckets.models // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('models',0))" 2>/dev/null || echo 0))
-        local editors=$(echo "$data" | (jq -r '.buckets.editors // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('editors',0))" 2>/dev/null || echo 0))
+    # Check for agent runtime status first
+    if [ -f "$AGENT_RUNTIME_STATUS" ]; then
+        local runtime_data=$(cat "$AGENT_RUNTIME_STATUS" 2>/dev/null)
+        local active_agents=$(echo "$runtime_data" | (jq -r '.agents | length' 2>/dev/null || python3 -c "import sys,json;print(len(json.load(sys.stdin).get('agents',{})))" 2>/dev/null || echo 0))
+        local tasks_processed=$(echo "$runtime_data" | (jq -r '.runtime_stats.tasks_processed // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('runtime_stats',{}).get('tasks_processed',0))" 2>/dev/null || echo 0))
+        local uptime=$(echo "$runtime_data" | (jq -r '.runtime_stats.uptime_seconds // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('runtime_stats',{}).get('uptime_seconds',0))" 2>/dev/null || echo 0))
+        
         move_cursor $((row+1)) $((col+2))
         clear_to_eol
-        printf "Total: ${WHITE}%d${NC}  Models: ${WHITE}%d${NC}  Editors: ${WHITE}%d${NC}" "$total" "$models" "$editors"
-
-        # Top processes
-        local top_list
+        printf "🤖 Active: ${GREEN}%d${NC}  Tasks: ${WHITE}%d${NC}  Uptime: ${CYAN}%ds${NC}" "$active_agents" "$tasks_processed" "$uptime"
+        
+        # Show individual agent status
+        local agent_status
         if command -v jq >/dev/null 2>&1; then
-            top_list=$(echo "$data" | jq -r '.top[] | "\(.cpu)% CPU · \(.mem)% MEM · PID \(.pid) · \(.name)"' 2>/dev/null | head -3)
+            agent_status=$(echo "$runtime_data" | jq -r '.agents | to_entries | .[] | "\(.value.agent_type): \(.value.status)"' 2>/dev/null | head -2)
         else
-            top_list=$(echo "$data" | python3 - <<'PY'
+            agent_status=$(echo "$runtime_data" | python3 - <<'PY'
 import sys, json
 d=json.load(sys.stdin)
-for i, t in enumerate(d.get('top', [])[:3]):
-    print(f"{t.get('cpu',0)}% CPU · {t.get('mem',0)}% MEM · PID {t.get('pid','-')} · {t.get('name','')}")
+for i, (aid, agent) in enumerate(d.get('agents', {}).items()):
+    if i < 2:
+        agent_type = agent.get('agent_type', 'unknown')
+        status = agent.get('status', 'unknown')
+        print(f"{agent_type}: {status}")
 PY
 )
         fi
+        
         local i=0
         while IFS= read -r line; do
+            [ -z "$line" ] && continue
             move_cursor $((row+2+i)) $((col+2))
             clear_to_eol
-            # Trim to panel width to avoid wrapping
-            printf "%s" "${line:0:$LEFT_WIDTH}"
+            case "$line" in
+                *active*|*running*) printf "  ${GREEN}●${NC} %s" "${line:0:$((LEFT_WIDTH-4))}" ;;
+                *busy*|*processing*) printf "  ${YELLOW}●${NC} %s" "${line:0:$((LEFT_WIDTH-4))}" ;;
+                *error*|*failed*) printf "  ${RED}●${NC} %s" "${line:0:$((LEFT_WIDTH-4))}" ;;
+                *) printf "  ${GRAY}●${NC} %s" "${line:0:$((LEFT_WIDTH-4))}" ;;
+            esac
             i=$((i+1))
-        done <<< "$top_list"
+        done <<< "$agent_status"
+        
+        # Show live coordination stats if available
+        if [ -f "$AGENT_COORDINATION" ]; then
+            local coord_data=$(cat "$AGENT_COORDINATION" 2>/dev/null)
+            local pending_tasks=$(echo "$coord_data" | (jq -r '.tasks.pending // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('tasks',{}).get('pending',0))" 2>/dev/null || echo 0))
+            local running_tasks=$(echo "$coord_data" | (jq -r '.tasks.running // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('tasks',{}).get('running',0))" 2>/dev/null || echo 0))
+            local success_rate=$(echo "$coord_data" | (jq -r '.performance.success_rate // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('performance',{}).get('success_rate',0))" 2>/dev/null || echo 0))
+            
+            move_cursor $((row+4)) $((col+2))
+            clear_to_eol
+            printf "⚡ Queue: ${YELLOW}%d${NC} ⟳ Running: ${GREEN}%d${NC} ✓ Rate: ${CYAN}%.0f%%${NC}" "$pending_tasks" "$running_tasks" "$(echo "$success_rate * 100" | bc 2>/dev/null || echo 0)"
+        fi
+        
     else
-        move_cursor $((row+1)) $((col+2))
-        clear_to_eol
-        echo -ne "${GRAY}Scanning processes...${NC}"
+        # Fallback to regular process monitoring
+        if [ -f "$AGENTS_STATUS" ]; then
+            local data=$(cat "$AGENTS_STATUS" 2>/dev/null)
+            local total=$(echo "$data" | (jq -r '.total_agents // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_agents',0))" 2>/dev/null || echo 0))
+            local models=$(echo "$data" | (jq -r '.buckets.models // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('models',0))" 2>/dev/null || echo 0))
+            local chimera=$(echo "$data" | (jq -r '.buckets.chimera // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('chimera',0))" 2>/dev/null || echo 0))
+            
+            move_cursor $((row+1)) $((col+2))
+            clear_to_eol
+            printf "Total: ${WHITE}%d${NC}  Models: ${WHITE}%d${NC}  Chimera: ${WHITE}%d${NC}" "$total" "$models" "$chimera"
+
+            # Top processes with enhanced formatting
+            local top_list
+            if command -v jq >/dev/null 2>&1; then
+                top_list=$(echo "$data" | jq -r '.top_cpu[] | "\(.type): \(.cpu)% CPU · \(.mem)% MEM"' 2>/dev/null | head -3)
+            else
+                top_list=$(echo "$data" | python3 - <<'PY'
+import sys, json
+d=json.load(sys.stdin)
+for i, t in enumerate(d.get('top_cpu', [])[:3]):
+    agent_type = t.get('type', 'process')
+    cpu = t.get('cpu', 0)
+    mem = t.get('mem', 0)
+    print(f"{agent_type}: {cpu}% CPU · {mem}% MEM")
+PY
+)
+            fi
+            
+            local i=0
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                move_cursor $((row+2+i)) $((col+2))
+                clear_to_eol
+                printf "  ${GREEN}▶${NC} %s" "${line:0:$((LEFT_WIDTH-4))"
+                i=$((i+1))
+            done <<< "$top_list"
+        else
+            move_cursor $((row+1)) $((col+2))
+            clear_to_eol
+            echo -ne "${GRAY}🔍 Scanning for agents...${NC}"
+            move_cursor $((row+2)) $((col+2))
+            clear_to_eol
+            echo -ne "${DIM}Start with: ./agents/launch_agents.sh${NC}"
+        fi
     fi
 }
 
