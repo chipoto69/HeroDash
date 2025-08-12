@@ -99,9 +99,6 @@ class ChimeraBridge:
         # Initialize components
         self.tracer = get_tracer()
         self.coordinator = get_coordinator()
-        
-        # Discover Chimera components
-        asyncio.create_task(self._initialize_async()) if ASYNC_AVAILABLE else None
     
     async def _initialize_async(self):
         """Initialize async components"""
