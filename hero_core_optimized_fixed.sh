@@ -625,7 +625,7 @@ PY
                 [ -z "$line" ] && continue
                 move_cursor $((row+2+i)) $((col+2))
                 clear_to_eol
-                printf "  ${GREEN}▶${NC} %s" "${line:0:$((LEFT_WIDTH-4))"
+                printf "  ${GREEN}▶${NC} %s" "${line:0:$((LEFT_WIDTH-4))}"
                 i=$((i+1))
             done <<< "$top_list"
         else
