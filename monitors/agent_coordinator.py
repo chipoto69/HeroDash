@@ -438,7 +438,13 @@ class AgentCoordinator:
                     for aid, agent_data in data.get("agents", {}).items():
                         # Convert datetime strings back to objects
                         agent_data["last_heartbeat"] = datetime.fromisoformat(agent_data["last_heartbeat"])
-                        agent_data["status"] = AgentStatus(agent_data["status"])
+                        # Handle status enum conversion safely
+                        status_value = agent_data["status"]
+                        if isinstance(status_value, str):
+                            try:
+                                agent_data["status"] = AgentStatus(status_value.split('.')[-1].lower())
+                            except ValueError:
+                                agent_data["status"] = AgentStatus.IDLE
                         self.agents[aid] = AgentInfo(**agent_data)
         except Exception as e:
             print(f"Error loading persistent data: {e}")
