@@ -12,6 +12,10 @@ NC='\033[0m'
 
 clear
 
+# Simple launcher log (also used by dashboard)
+LAUNCH_LOG="/tmp/hero_core.log"
+echo "$(date '+%Y-%m-%d %H:%M:%S') | Launcher start" >> "$LAUNCH_LOG"
+
 echo -e "${CYAN}"
 echo "    ██╗  ██╗███████╗██████╗  ██████╗      ██████╗ ██████╗ ██████╗ ███████╗"
 echo "    ██║  ██║██╔════╝██╔══██╗██╔═══██╗    ██╔════╝██╔═══██╗██╔══██╗██╔════╝"
@@ -26,13 +30,28 @@ echo ""
 echo -e "${YELLOW}Initializing Hero Core...${NC}"
 echo ""
 
-# Stop any existing dashboards
+# Stop any existing dashboards (avoid killing self)
+safe_kill() {
+  local pat="$1"
+  if command -v pgrep >/dev/null 2>&1; then
+    pgrep -f "$pat" 2>/dev/null | while read -r pid; do
+      [ -z "$pid" ] && continue
+      if [ "$pid" != "$$" ] && [ "$pid" != "$PPID" ]; then
+        kill "$pid" 2>/dev/null || true
+      fi
+    done
+  else
+    pkill -f "$pat" 2>/dev/null || true
+  fi
+}
+
 if pgrep -f "dashboard" &>/dev/null; then
-    echo -e "${YELLOW}Stopping existing dashboards...${NC}"
-    pkill -f "hero_dashboard" 2>/dev/null
-    pkill -f "nexus_dashboard" 2>/dev/null
-    sleep 1
-    echo -e "${GREEN}✓ Clean slate achieved${NC}"
+  echo -e "${YELLOW}Stopping existing dashboards...${NC}"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') | Launcher stopping old dashboards" >> "$LAUNCH_LOG"
+  safe_kill "hero_dashboard"
+  safe_kill "nexus_dashboard"
+  sleep 1
+  echo -e "${GREEN}✓ Clean slate achieved${NC}"
 fi
 
 # Quick system check
@@ -52,6 +71,7 @@ docker_count=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')
 
 echo ""
 echo -e "${CYAN}Launching Hero Core Command Centre...${NC}"
+echo "$(date '+%Y-%m-%d %H:%M:%S') | Launcher exec core" >> "$LAUNCH_LOG"
 sleep 1
 
 # Launch Hero Core
