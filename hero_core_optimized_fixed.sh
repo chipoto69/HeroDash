@@ -33,6 +33,10 @@ TOKEN_ANALYSIS="$HERO_CACHE/token_analysis.json"
 GITHUB_ACTIVITY="$HERO_CACHE/github_activity.json"
 AGENTS_STATUS="$HERO_CACHE/agents_status.json"
 CODE_ACTIVITY="$HERO_CACHE/code_activity.json"
+LANGSMITH_STATS="$HERO_CACHE/langsmith_stats.json"
+AGENT_COORDINATION="$HERO_CACHE/agent_coordination.json"
+CHIMERA_INTEGRATION="$HERO_CACHE/chimera_integration.json"
+LOCK_FILE="$HERO_HOME/hero.pid"
 REFRESH_RATE=3
 LAZY_REFRESH_COUNTER=0
 LAZY_REFRESH_INTERVAL=10  # Refresh token data every 10 cycles (30 seconds)
@@ -46,10 +50,10 @@ CMD_CACHE=()
 CMD_CACHE_TIME=()
 
 # Terminal control
-clear_to_eol() { echo -ne "\033[K"; }
-move_cursor() { echo -ne "\033[${1};${2}H"; }
-hide_cursor() { tput civis 2>/dev/null; }
-show_cursor() { tput cnorm 2>/dev/null; }
+clear_to_eol() { [ -t 1 ] && echo -ne "\033[K"; }
+move_cursor() { [ -t 1 ] && echo -ne "\033[${1};${2}H"; }
+hide_cursor() { [ -t 1 ] && tput civis 2>/dev/null || true; }
+show_cursor() { [ -t 1 ] && tput cnorm 2>/dev/null || true; }
 
 # Get terminal size
 get_term_size() {
@@ -108,8 +112,24 @@ init() {
     mkdir -p "$HERO_CACHE"
     touch "$HERO_LOG"
     dbg "init start"
+
+    # Single-instance lock: terminate previous instance if still running
+    if [ -f "$LOCK_FILE" ]; then
+        old_pid=$(cat "$LOCK_FILE" 2>/dev/null)
+        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+            log_event "Existing instance ($old_pid) detected; requesting termination"
+            kill "$old_pid" 2>/dev/null || true
+            sleep 1
+            if kill -0 "$old_pid" 2>/dev/null; then
+                kill -9 "$old_pid" 2>/dev/null || true
+                sleep 0.2
+            fi
+        fi
+    fi
+    echo "$$" > "$LOCK_FILE"
+    trap 'rm -f "$LOCK_FILE" >/dev/null 2>&1' EXIT
     hide_cursor
-    clear
+    [ -t 1 ] && clear || true
     
     # Stop any other dashboards (avoid killing self)
     for pat in "nexus_dashboard" "hero_dashboard"; do
@@ -134,40 +154,56 @@ init() {
 
 # Cleanup
 cleanup() {
+    local reason="$1"
+    log_event "Dashboard cleanup (reason: ${reason:-unknown})"
     show_cursor
-    clear
+    [ -t 1 ] && clear || true
     echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║ ${WHITE}Hero Core Session Terminated${CYAN}           ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
 }
-trap cleanup EXIT INT TERM
+trap 'cleanup EXIT' EXIT
+trap 'cleanup INT' INT
+trap 'cleanup TERM' TERM
 
 # Log events
 log_event() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" >> "$HERO_LOG"
+    local msg="$(date '+%Y-%m-%d %H:%M:%S') | $1"
+    echo "$msg" >> "$HERO_LOG"
+    echo "$msg" >> "/tmp/hero_core.log"
 }
 
 # Update lazy-refresh data (Claude usage, GitHub activity)
 update_lazy_data() {
     # Update Claude usage data
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py > /dev/null 2>&1 &
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py > /dev/null 2>&1 &
+        fi
     fi
     # Analyze token trends
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py > /dev/null 2>&1 &
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py > /dev/null 2>&1 &
+        fi
     fi
     
     # Update GitHub activity data
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py > /dev/null 2>&1 &
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py > /dev/null 2>&1 &
+        fi
     fi
     # Update agents and code activity
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/agents_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/agents_monitor.py > /dev/null 2>&1 &
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/agents_monitor.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/agents_monitor.py > /dev/null 2>&1 &
+        fi
     fi
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py > /dev/null 2>&1 &
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py > /dev/null 2>&1 &
+        fi
     fi
 }
 
