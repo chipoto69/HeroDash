@@ -1,0 +1,280 @@
+# NATS Subject Configuration for Hero Command Centre
+# Defines the messaging patterns and subject hierarchies for agent communication
+
+version: "2.0"
+updated: "2025-08-12"
+environment: "{env}"  # dev, staging, prod
+
+# Subject Hierarchy Structure
+# Format: {system}.{version}.{environment}.{domain}.{entity}.{action}
+# Example: hero.v1.dev.orchestrator.tasks.assign
+
+subject_patterns:
+  # Core System Subjects
+  hero_core:
+    pattern: "hero.v1.{env}"
+    description: "Root namespace for Hero Command Centre"
+    
+  # Agent Communication Patterns
+  agent_coordination:
+    pattern: "hero.v1.{env}.orchestrator"
+    description: "Task orchestrator communications"
+    subjects:
+      # Task Management
+      task_assign: "hero.v1.{env}.orchestrator.tasks.assign"
+      task_cancel: "hero.v1.{env}.orchestrator.tasks.cancel"
+      task_status: "hero.v1.{env}.orchestrator.tasks.status"
+      task_priority: "hero.v1.{env}.orchestrator.tasks.priority"
+      
+      # Workflow Control
+      workflow_start: "hero.v1.{env}.orchestrator.workflow.start"
+      workflow_pause: "hero.v1.{env}.orchestrator.workflow.pause"
+      workflow_resume: "hero.v1.{env}.orchestrator.workflow.resume"
+      workflow_abort: "hero.v1.{env}.orchestrator.workflow.abort"
+      
+      # Agent Management
+      agent_register: "hero.v1.{env}.orchestrator.agents.register"
+      agent_status_req: "hero.v1.{env}.orchestrator.agents.status_request"
+      agent_capabilities: "hero.v1.{env}.orchestrator.agents.capabilities"
+      agent_health_check: "hero.v1.{env}.orchestrator.agents.health_check"
+      
+      # Load Balancing
+      load_balance: "hero.v1.{env}.orchestrator.balance.distribute"
+      load_metrics: "hero.v1.{env}.orchestrator.balance.metrics"
+      load_adjust: "hero.v1.{env}.orchestrator.balance.adjust"
+
+  knowledge_management:
+    pattern: "hero.v1.{env}.knowledge"
+    description: "Knowledge integration communications"
+    subjects:
+      # Knowledge Updates
+      knowledge_add: "hero.v1.{env}.knowledge.add"
+      knowledge_update: "hero.v1.{env}.knowledge.update"
+      knowledge_query: "hero.v1.{env}.knowledge.query"
+      knowledge_delete: "hero.v1.{env}.knowledge.delete"
+      
+      # Insights and Patterns
+      insight_generate: "hero.v1.{env}.knowledge.insights.generate"
+      insight_alert: "hero.v1.{env}.knowledge.insights.alert"
+      pattern_detected: "hero.v1.{env}.knowledge.patterns.detected"
+      pattern_request: "hero.v1.{env}.knowledge.patterns.request"
+      
+      # Context Services
+      context_request: "hero.v1.{env}.knowledge.context.request"
+      context_response: "hero.v1.{env}.knowledge.context.response"
+      context_invalidate: "hero.v1.{env}.knowledge.context.invalidate"
+      
+      # Memory Operations
+      memory_consolidate: "hero.v1.{env}.knowledge.memory.consolidate"
+      memory_cleanup: "hero.v1.{env}.knowledge.memory.cleanup"
+      memory_backup: "hero.v1.{env}.knowledge.memory.backup"
+
+  agent_responses:
+    pattern: "hero.v1.{env}.agents.{agent_id}"
+    description: "Individual agent response patterns"
+    subjects:
+      # Task Responses
+      task_accepted: "hero.v1.{env}.agents.{agent_id}.task.accepted"
+      task_rejected: "hero.v1.{env}.agents.{agent_id}.task.rejected"
+      task_progress: "hero.v1.{env}.agents.{agent_id}.task.progress"
+      task_complete: "hero.v1.{env}.agents.{agent_id}.task.complete"
+      task_failed: "hero.v1.{env}.agents.{agent_id}.task.failed"
+      
+      # Status Updates
+      status_heartbeat: "hero.v1.{env}.agents.{agent_id}.status.heartbeat"
+      status_update: "hero.v1.{env}.agents.{agent_id}.status.update"
+      status_error: "hero.v1.{env}.agents.{agent_id}.status.error"
+      status_shutdown: "hero.v1.{env}.agents.{agent_id}.status.shutdown"
+      
+      # Capabilities
+      capabilities_announce: "hero.v1.{env}.agents.{agent_id}.capabilities.announce"
+      capabilities_update: "hero.v1.{env}.agents.{agent_id}.capabilities.update"
+      
+      # Interactions
+      interaction_data: "hero.v1.{env}.agents.{agent_id}.interaction"
+      help_request: "hero.v1.{env}.agents.{agent_id}.help_request"
+      collaboration_offer: "hero.v1.{env}.agents.{agent_id}.collaboration.offer"
+
+  monitoring_events:
+    pattern: "hero.v1.{env}.monitors"
+    description: "Monitoring and observability events"
+    subjects:
+      # System Monitoring
+      system_metrics: "hero.v1.{env}.monitors.system.metrics"
+      system_alerts: "hero.v1.{env}.monitors.system.alerts"
+      system_health: "hero.v1.{env}.monitors.system.health"
+      
+      # Agent Monitoring
+      agent_performance: "hero.v1.{env}.monitors.agents.performance"
+      agent_health: "hero.v1.{env}.monitors.agents.health"
+      agent_discovery: "hero.v1.{env}.monitors.agents.discovery"
+      
+      # Workflow Monitoring
+      workflow_metrics: "hero.v1.{env}.monitors.workflow.metrics"
+      workflow_events: "hero.v1.{env}.monitors.workflow.events"
+      workflow_analysis: "hero.v1.{env}.monitors.workflow.analysis"
+      
+      # Integration Monitoring
+      chimera_bridge: "hero.v1.{env}.monitors.chimera.status"
+      langsmith_traces: "hero.v1.{env}.monitors.langsmith.traces"
+      nats_health: "hero.v1.{env}.monitors.nats.health"
+
+# Chimera Integration Subjects
+chimera_integration:
+  pattern: "chimera.v1.{env}.hero"
+  description: "Integration with Chimera framework"
+  subjects:
+    # Bidirectional Communication
+    to_chimera: "hero.v1.{env}.chimera.agents.{agent_name}.{action}"
+    from_chimera: "chimera.v1.{env}.hero.agents.{agent_name}.{action}"
+    
+    # Specific Chimera Agents
+    embedder: "chimera.v1.{env}.hero.agents.embedder"
+    retriever: "chimera.v1.{env}.hero.agents.retriever"
+    memory: "chimera.v1.{env}.hero.agents.memory"
+    orchestrator: "chimera.v1.{env}.hero.agents.orchestrator"
+    ui_agent: "chimera.v1.{env}.hero.agents.ui_agent"
+
+# Wildcard Patterns for Subscriptions
+wildcard_patterns:
+  all_agent_interactions: "hero.v1.{env}.agents.*.interaction"
+  all_task_completions: "hero.v1.{env}.agents.*.task.complete"
+  all_status_updates: "hero.v1.{env}.agents.*.status.*"
+  all_monitoring_data: "hero.v1.{env}.monitors.*"
+  all_knowledge_events: "hero.v1.{env}.knowledge.*"
+  all_orchestrator_commands: "hero.v1.{env}.orchestrator.*"
+  all_chimera_messages: "chimera.v1.{env}.hero.*"
+
+# Message Routing Rules
+routing_rules:
+  task_orchestrator:
+    subscribes_to:
+      - "hero.v1.{env}.agents.*.task.complete"
+      - "hero.v1.{env}.agents.*.task.failed"
+      - "hero.v1.{env}.agents.*.status.heartbeat"
+      - "hero.v1.{env}.agents.*.capabilities.*"
+      - "hero.v1.{env}.monitors.agents.*"
+    publishes_to:
+      - "hero.v1.{env}.orchestrator.tasks.*"
+      - "hero.v1.{env}.orchestrator.workflow.*"
+      - "hero.v1.{env}.orchestrator.agents.*"
+      - "hero.v1.{env}.orchestrator.balance.*"
+
+  knowledge_integration:
+    subscribes_to:
+      - "hero.v1.{env}.agents.*.interaction"
+      - "hero.v1.{env}.orchestrator.tasks.complete"
+      - "hero.v1.{env}.monitors.*.data"
+      - "hero.v1.{env}.knowledge.query"
+    publishes_to:
+      - "hero.v1.{env}.knowledge.insights.*"
+      - "hero.v1.{env}.knowledge.patterns.*"
+      - "hero.v1.{env}.knowledge.context.*"
+      - "hero.v1.{env}.knowledge.memory.*"
+
+  monitoring_agents:
+    subscribes_to:
+      - "hero.v1.{env}.agents.*"
+      - "hero.v1.{env}.orchestrator.*"
+      - "hero.v1.{env}.knowledge.*"
+    publishes_to:
+      - "hero.v1.{env}.monitors.*"
+
+  chimera_bridge:
+    subscribes_to:
+      - "chimera.v1.{env}.hero.*"
+      - "hero.v1.{env}.chimera.*"
+    publishes_to:
+      - "hero.v1.{env}.chimera.*"
+      - "chimera.v1.{env}.hero.*"
+
+# Stream Configuration
+streams:
+  hero_tasks:
+    subjects: ["hero.v1.{env}.orchestrator.tasks.>"]
+    retention_policy: "WorkQueue"
+    max_msgs: 10000
+    max_age: "24h"
+    storage: "File"
+    
+  hero_events:
+    subjects: ["hero.v1.{env}.agents.>", "hero.v1.{env}.monitors.>"]
+    retention_policy: "Limits"
+    max_msgs: 50000
+    max_age: "7d"
+    storage: "File"
+    
+  hero_knowledge:
+    subjects: ["hero.v1.{env}.knowledge.>"]
+    retention_policy: "Limits"
+    max_msgs: 100000
+    max_age: "30d"
+    storage: "File"
+    
+  hero_chimera_bridge:
+    subjects: ["hero.v1.{env}.chimera.>", "chimera.v1.{env}.hero.>"]
+    retention_policy: "Limits"
+    max_msgs: 25000
+    max_age: "7d"
+    storage: "File"
+
+# Consumer Groups
+consumer_groups:
+  task_processing:
+    stream: "hero_tasks"
+    subjects: ["hero.v1.{env}.orchestrator.tasks.assign"]
+    delivery_policy: "All"
+    ack_policy: "Explicit"
+    
+  event_monitoring:
+    stream: "hero_events"
+    subjects: ["hero.v1.{env}.agents.>", "hero.v1.{env}.monitors.>"]
+    delivery_policy: "New"
+    ack_policy: "None"
+    
+  knowledge_processing:
+    stream: "hero_knowledge"
+    subjects: ["hero.v1.{env}.knowledge.add", "hero.v1.{env}.knowledge.update"]
+    delivery_policy: "All"
+    ack_policy: "Explicit"
+
+# Security Configuration
+security:
+  authentication: true
+  authorization: true
+  tls_required: true
+  
+  user_permissions:
+    task_orchestrator:
+      publish: ["hero.v1.{env}.orchestrator.>"]
+      subscribe: ["hero.v1.{env}.agents.>", "hero.v1.{env}.monitors.agents.>"]
+      
+    knowledge_integration:
+      publish: ["hero.v1.{env}.knowledge.>"]
+      subscribe: ["hero.v1.{env}.agents.*.interaction", "hero.v1.{env}.monitors.>"]
+      
+    monitoring_agents:
+      publish: ["hero.v1.{env}.monitors.>"]
+      subscribe: ["hero.v1.{env}.>"]
+      
+    chimera_bridge:
+      publish: ["hero.v1.{env}.chimera.>", "chimera.v1.{env}.hero.>"]
+      subscribe: ["hero.v1.{env}.chimera.>", "chimera.v1.{env}.hero.>"]
+
+# Environment-Specific Overrides
+environments:
+  dev:
+    retention_multiplier: 0.1  # Shorter retention for dev
+    max_msgs_multiplier: 0.1   # Fewer messages for dev
+    debug_subjects: ["hero.v1.dev.debug.>"]
+    
+  staging:
+    retention_multiplier: 0.5  # Medium retention for staging
+    max_msgs_multiplier: 0.5   # Medium message limits
+    performance_testing: true
+    
+  prod:
+    retention_multiplier: 1.0  # Full retention for production
+    max_msgs_multiplier: 1.0   # Full message limits
+    high_availability: true
+    monitoring_enhanced: true
