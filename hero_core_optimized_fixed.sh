@@ -433,31 +433,62 @@ update_chimera_section() {
     local col=$RIGHT_COL
     
     move_cursor $row $col
-    echo -e "${MAGENTA}[ CHIMERA KB ]${NC}"
+    echo -e "${CYAN}[ CHIMERA INTEGRATION ]${NC}"
     
-    # Use cached command execution
+    # Chimera bridge status
+    if [ -f "$CHIMERA_INTEGRATION" ]; then
+        local chimera_data=$(cat "$CHIMERA_INTEGRATION" 2>/dev/null)
+        local chimera_detected=$(echo "$chimera_data" | (jq -r '.integration_status.chimera_detected // false' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('integration_status',{}).get('chimera_detected',False))" 2>/dev/null || echo false))
+        local nats_connected=$(echo "$chimera_data" | (jq -r '.integration_status.nats_connected // false' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('integration_status',{}).get('nats_connected',False))" 2>/dev/null || echo false))
+        local agents_discovered=$(echo "$chimera_data" | (jq -r '.chimera_agents.total // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('chimera_agents',{}).get('total',0))" 2>/dev/null || echo 0))
+        
+        move_cursor $((row+1)) $((col+2))
+        clear_to_eol
+        if [ "$chimera_detected" = "true" ]; then
+            printf "Framework: ${GREEN}● detected${NC}  Agents: ${WHITE}%d${NC}" "$agents_discovered"
+        else
+            printf "Framework: ${GRAY}○ not found${NC}"
+        fi
+        
+        move_cursor $((row+2)) $((col+2))
+        clear_to_eol
+        if [ "$nats_connected" = "true" ]; then
+            printf "NATS: ${GREEN}● connected${NC}"
+        else
+            printf "NATS: ${GRAY}○ offline${NC}"
+        fi
+    fi
+    
+    # Knowledge graph status
+    if [ -f "$GRAPHITI_STATS" ]; then
+        local data=$(cat "$GRAPHITI_STATS" 2>/dev/null)
+        if [ -n "$data" ]; then
+            local nodes=$(echo "$data" | jq -r '.node_count // 0' 2>/dev/null || echo "0")
+            local edges=$(echo "$data" | jq -r '.edge_count // 0' 2>/dev/null || echo "0")
+            
+            move_cursor $((row+3)) $((col+2))
+            clear_to_eol
+            printf "Knowledge: ${WHITE}%s${NC} nodes  ${WHITE}%s${NC} edges" "$nodes" "$edges"
+        fi
+    fi
+    
+    # Services status (condensed)
+    local services_row=$((row+4))
+    
+    # Use cached command execution for process checks
     local ps_output=$(cached_cmd "ps aux" 3)
     
-    # Neo4j/Graphiti
-    move_cursor $((row+1)) $((col+2))
+    move_cursor $services_row $((col+2))
     clear_to_eol
-    if echo "$ps_output" | grep -q "neo4j"; then
-        printf "${GREEN}●${NC} Graphiti: ${GREEN}online${NC}"
-    else
-        printf "${YELLOW}○${NC} Graphiti: ${YELLOW}offline${NC}"
-    fi
     
-    # Redis
-    move_cursor $((row+2)) $((col+2))
-    clear_to_eol
+    # Redis status (inline)
     if echo "$ps_output" | grep -q "redis-server"; then
-        local keys=$(redis-cli dbsize 2>/dev/null | grep -oE "[0-9]+" || echo "0")
-        printf "${GREEN}●${NC} Redis: ${WHITE}%s${NC} keys" "$keys"
+        printf "Redis: ${GREEN}●${NC}  "
     else
-        printf "${DARK}○${NC} Redis: ${GRAY}offline${NC}"
+        printf "Redis: ${GRAY}○${NC}  "
     fi
     
-    # Docker
+    # Docker status (inline)
     local docker_count=$(cached_cmd "docker ps -q 2>/dev/null | wc -l" 5 | tr -d ' ')
     move_cursor $((row+3)) $((col+2))
     clear_to_eol
@@ -700,19 +731,62 @@ main() {
                 c|C)
                     show_claude_monitor
                     ;;
+                a|A)
+                    # Show agent coordination details
+                    clear
+                    echo -e "${CYAN}AGENT COORDINATION STATUS${NC}"
+                    echo "═══════════════════════════"
+                    if [ -f "$AGENT_COORDINATION" ]; then
+                        cat "$AGENT_COORDINATION" | jq . 2>/dev/null || cat "$AGENT_COORDINATION"
+                    else
+                        echo "No coordination data available"
+                    fi
+                    echo ""
+                    echo -e "${GRAY}Press any key to return...${NC}"
+                    read -n 1
+                    initial_display
+                    ;;
+                l|L)
+                    # Show LangSmith traces
+                    clear
+                    echo -e "${CYAN}LANGSMITH TRACING STATUS${NC}"
+                    echo "═══════════════════════════"
+                    if [ -f "$LANGSMITH_STATS" ]; then
+                        cat "$LANGSMITH_STATS" | jq . 2>/dev/null || cat "$LANGSMITH_STATS"
+                    else
+                        echo "No tracing data available"
+                    fi
+                    echo ""
+                    echo -e "${GRAY}Press any key to return...${NC}"
+                    read -n 1
+                    initial_display
+                    ;;
+                s|S)
+                    # Sync with Chimera
+                    echo -e "\n${YELLOW}Syncing with Chimera framework...${NC}"
+                    if [ -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" ]; then
+                        python3 /Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py --sync
+                    fi
+                    sleep 2
+                    initial_display
+                    ;;
                 h|H)
                     clear
                     echo -e "${CYAN}HERO CORE ENHANCED - HELP${NC}"
                     echo "═══════════════════════════"
                     echo "T - Refresh token/GitHub data"
+                    echo "A - Show agent coordination status"
+                    echo "L - Show LangSmith tracing status"
+                    echo "S - Sync with Chimera framework"
                     echo "G - Show Graphiti details"
                     echo "N - Open Neo4j browser"
                     echo "C - Launch Claude monitor (ccm)"
                     echo "R - Force refresh display"
                     echo "Q - Quit"
                     echo ""
-                    echo "Token data refreshes every 30 seconds"
-                    echo "GitHub data refreshes every 30 seconds"
+                    echo "Multi-agent coordination active"
+                    echo "LangSmith tracing integrated"
+                    echo "Chimera framework bridge enabled"
                     echo ""
                     echo -e "${GRAY}Press any key to return...${NC}"
                     read -n 1
