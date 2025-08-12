@@ -113,6 +113,94 @@ def summarize(agents):
     
     return total, top_cpu, buckets, frameworks, total_cpu, total_mem
 
+def classify_agent_type(cmd: str) -> str:
+    """Classify agent type based on command string"""
+    cmd_lower = cmd.lower()
+    
+    if any(k in cmd_lower for k in ["claude", "ccm"]):
+        return "claude_agent"
+    elif any(k in cmd_lower for k in ["ollama", "vllm", "llama"]):
+        return "local_llm"
+    elif any(k in cmd_lower for k in ["cursor", "code", "windsurf"]):
+        return "code_editor"
+    elif any(k in cmd_lower for k in ["chimera", "langgraph"]):
+        return "chimera_agent"
+    elif any(k in cmd_lower for k in ["nats", "jetstream"]):
+        return "messaging_service"
+    elif any(k in cmd_lower for k in ["embedder", "retriever"]):
+        return "knowledge_agent"
+    elif any(k in cmd_lower for k in ["orchestrator", "supervisor"]):
+        return "coordinator_agent"
+    elif any(k in cmd_lower for k in ["autogen", "crewai", "swarm"]):
+        return "multi_agent_framework"
+    else:
+        return "generic_agent"
+
+def detect_framework(cmd: str) -> str:
+    """Detect the framework being used"""
+    cmd_lower = cmd.lower()
+    
+    if "chimera" in cmd_lower:
+        return "chimera"
+    elif "langgraph" in cmd_lower:
+        return "langgraph"
+    elif "autogen" in cmd_lower:
+        return "autogen"
+    elif "crewai" in cmd_lower:
+        return "crewai"
+    elif "swarm" in cmd_lower:
+        return "swarm"
+    elif "nats" in cmd_lower:
+        return "nats"
+    elif any(k in cmd_lower for k in ["claude", "openai"]):
+        return "llm_api"
+    elif "ollama" in cmd_lower:
+        return "ollama"
+    else:
+        return "unknown"
+
+def get_chimera_status() -> Dict[str, Any]:
+    """Get status of Chimera-specific services"""
+    chimera_base = "/Users/rudlord/q3/frontline"
+    
+    status = {
+        "nats_running": False,
+        "langgraph_active": False,
+        "agents_count": 0,
+        "services": []
+    }
+    
+    # Check if NATS is running
+    try:
+        import subprocess
+        result = subprocess.run(["pgrep", "-f", "nats-server"], 
+                              capture_output=True, text=True, timeout=2)
+        status["nats_running"] = len(result.stdout.strip()) > 0
+    except Exception:
+        pass
+    
+    # Check for LangGraph processes
+    try:
+        result = subprocess.run(["pgrep", "-f", "langgraph"], 
+                              capture_output=True, text=True, timeout=2)
+        status["langgraph_active"] = len(result.stdout.strip()) > 0
+    except Exception:
+        pass
+    
+    # Check for Chimera-specific services
+    chimera_services = ["embedder", "retriever", "memory", "orchestrator"]
+    for service in chimera_services:
+        try:
+            result = subprocess.run(["pgrep", "-f", service], 
+                                  capture_output=True, text=True, timeout=1)
+            if result.stdout.strip():
+                status["services"].append(service)
+                status["agents_count"] += 1
+        except Exception:
+            pass
+    
+    return status
+
 def save_json(path: Path, data: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -120,19 +208,79 @@ def save_json(path: Path, data: dict):
         json.dump(data, f, indent=2)
     os.replace(tmp, path)
 
+@trace_hero_function("main_agents_monitor", "agents-monitor")
 def main():
+    """Main function to collect and save agent status"""
     cache_dir = Path.home() / ".hero_core" / "cache"
     out_file = cache_dir / "agents_status.json"
-    procs = list_processes_ps()
-    agents = filter_agents(procs)
-    total, top_cpu, buckets = summarize(agents)
-    payload = {
-        "timestamp": datetime.now().isoformat(),
-        "total_agents": total,
-        "buckets": buckets,
-        "top": top_cpu,
-    }
-    save_json(out_file, payload)
+    
+    # Get tracer for workflow tracking
+    tracer = get_tracer()
+    if tracer:
+        tracer.add_agent_interaction(
+            tracer.session_id, 
+            "agents-monitor", 
+            "collect_agent_data"
+        )
+    
+    try:
+        procs = list_processes_ps()
+        agents = filter_agents(procs)
+        total, top_cpu, buckets, frameworks, total_cpu, total_mem = summarize(agents)
+        
+        # Get Chimera-specific status
+        chimera_status = get_chimera_status()
+        
+        # Enhanced payload with more comprehensive data
+        payload = {
+            "timestamp": datetime.now().isoformat(),
+            "total_agents": total,
+            "buckets": buckets,
+            "frameworks": frameworks,
+            "top_cpu": top_cpu,
+            "performance": {
+                "total_cpu_usage": round(total_cpu, 2),
+                "total_memory_usage": round(total_mem, 2),
+                "average_cpu_per_agent": round(total_cpu / total if total > 0 else 0, 2)
+            },
+            "chimera_status": chimera_status,
+            "hero_integration": {
+                "langsmith_enabled": tracer is not None and tracer.client is not None if tracer else False,
+                "tracing_active": tracer is not None,
+                "monitor_version": "2.0_enhanced"
+            },
+            "metadata": {
+                "scan_duration_ms": 0,  # Could be calculated
+                "process_count_total": len(procs),
+                "agent_detection_rate": round(total / len(procs) if procs else 0, 3)
+            }
+        }
+        
+        save_json(out_file, payload)
+        
+        # Update tracer statistics if available
+        if tracer:
+            tracer.stats["active_agents"].update(frameworks.keys())
+            tracer._save_cache()
+            
+    except Exception as e:
+        # Save error state
+        error_payload = {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "total_agents": 0,
+            "buckets": {},
+            "status": "error"
+        }
+        save_json(out_file, error_payload)
+        
+        if tracer:
+            tracer.add_agent_interaction(
+                tracer.session_id,
+                "agents-monitor",
+                "error",
+                {"error": str(e)}
+            )
 
 if __name__ == "__main__":
     main()
