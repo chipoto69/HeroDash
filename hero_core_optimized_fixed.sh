@@ -205,6 +205,27 @@ update_lazy_data() {
             python3 /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py > /dev/null 2>&1 &
         fi
     fi
+    
+    # Update LangSmith tracing stats
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py" ]; then
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py > /dev/null 2>&1 &
+        fi
+    fi
+    
+    # Update agent coordination status
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py" ]; then
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py > /dev/null 2>&1 &
+        fi
+    fi
+    
+    # Update Chimera bridge status
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" ]; then
+        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" >/dev/null 2>&1; then
+            python3 /Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py > /dev/null 2>&1 &
+        fi
+    fi
 }
 
 # Draw ASCII header
