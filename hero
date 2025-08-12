@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick launcher for Hero Core
+exec /Users/rudlord/Hero_dashboard/launch_hero.sh

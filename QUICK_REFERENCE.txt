@@ -1,0 +1,39 @@
+HERO CORE - QUICK REFERENCE
+===========================
+
+LAUNCH:
+  ./hero                    # Quick start
+  ./launch_hero.sh         # With checks
+  ./hero_core.sh          # Direct
+
+KEYBOARD:
+  T - Refresh tokens/GitHub
+  G - Graphiti details
+  N - Neo4j browser
+  C - Claude monitor (ccm)
+  H - Help
+  R - Refresh screen
+  Q - Quit
+
+UTILITIES:
+  ./utils/dashboard_diagnostics.sh    # Check system
+  ./utils/dashboard_control.sh stop   # Stop all
+
+FILES:
+  docs/DOCUMENTATION.md    # Full technical docs
+  ~/.hero_core/hero.log   # Activity log
+  ~/.hero_core/cache/     # Data cache
+
+WHAT IT MONITORS:
+  • Claude token usage (8 sessions, 78k/300k tokens)
+  • GitHub activity (21-day graph)
+  • AI systems (Claude, Qwen, VS Code)
+  • Chimera KB (Neo4j, Redis, Docker)
+  • System (CPU, Memory, Network)
+
+REFRESH RATES:
+  • Fast (3 sec): AI, System, KB
+  • Lazy (30 sec): Tokens, GitHub
+
+---
+Created by Quantropy | Hero Core v1.0
