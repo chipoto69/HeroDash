@@ -1,0 +1,381 @@
+# LangSmith Configuration for Hero Command Centre
+# Defines tracing, observability, and analytics configuration for all agents
+
+version: "2.0"
+updated: "2025-08-12"
+
+# Core LangSmith Configuration
+langsmith:
+  project_name: "hero-command-centre"
+  api_url: "https://api.smith.langchain.com"
+  environment: "{env}"  # dev, staging, prod
+  
+  # Authentication
+  auth:
+    api_key_env: "LANGSMITH_API_KEY"
+    endpoint_env: "LANGSMITH_ENDPOINT"
+    project_env: "LANGSMITH_PROJECT"
+
+# Project Structure
+projects:
+  main: "hero-command-centre"
+  sub_projects:
+    orchestration: "hero-orchestration"
+    knowledge: "hero-knowledge"
+    monitoring: "hero-monitoring"
+    chimera_integration: "hero-chimera"
+
+# Tracing Configuration
+tracing:
+  # Global Tracing Settings
+  global:
+    enabled: true
+    sampling_rate: 1.0  # 100% sampling for development
+    max_trace_depth: 10
+    trace_timeout_seconds: 300
+    auto_trace_functions: true
+    
+  # Agent-Specific Tracing
+  agents:
+    task_orchestrator:
+      trace_level: "detailed"
+      trace_inputs: true
+      trace_outputs: true
+      trace_intermediate_steps: true
+      custom_tags:
+        - "orchestration"
+        - "task-management"
+        - "coordination"
+      trace_functions:
+        - "submit_task"
+        - "assign_task_to_agent"
+        - "execute_workflow"
+        - "balance_workload"
+        - "handle_task_failure"
+        
+    knowledge_integration:
+      trace_level: "detailed"
+      trace_inputs: true
+      trace_outputs: true
+      trace_knowledge_operations: true
+      custom_tags:
+        - "knowledge-management"
+        - "graph-operations"
+        - "semantic-search"
+      trace_functions:
+        - "add_memory"
+        - "search_memory_nodes"
+        - "generate_insights"
+        - "process_knowledge_query"
+        - "consolidate_knowledge"
+        
+    monitoring_agents:
+      trace_level: "summary"
+      trace_inputs: false
+      trace_outputs: true
+      trace_performance_metrics: true
+      custom_tags:
+        - "monitoring"
+        - "system-health"
+        - "performance"
+      trace_functions:
+        - "collect_agent_data"
+        - "update_performance_metrics"
+        - "generate_alerts"
+
+# Trace Categories
+trace_categories:
+  workflow_execution:
+    description: "End-to-end workflow tracing"
+    includes:
+      - "workflow_start"
+      - "task_assignment"
+      - "task_execution"
+      - "task_completion"
+      - "workflow_finish"
+    metadata:
+      - "workflow_id"
+      - "total_tasks"
+      - "duration"
+      - "success_rate"
+      
+  agent_coordination:
+    description: "Inter-agent communication and coordination"
+    includes:
+      - "agent_discovery"
+      - "capability_assessment"
+      - "task_delegation"
+      - "status_synchronization"
+      - "load_balancing"
+    metadata:
+      - "participating_agents"
+      - "coordination_type"
+      - "success_metrics"
+      
+  knowledge_operations:
+    description: "Knowledge graph and memory operations"
+    includes:
+      - "knowledge_storage"
+      - "knowledge_retrieval"
+      - "pattern_recognition"
+      - "insight_generation"
+      - "context_provision"
+    metadata:
+      - "knowledge_type"
+      - "graph_nodes_affected"
+      - "query_complexity"
+      - "result_quality"
+      
+  system_monitoring:
+    description: "System health and performance monitoring"
+    includes:
+      - "performance_collection"
+      - "health_assessment"
+      - "alert_generation"
+      - "trend_analysis"
+    metadata:
+      - "monitored_components"
+      - "metric_types"
+      - "alert_severity"
+
+# Metadata Standards
+metadata_standards:
+  required_fields:
+    - "agent_id"
+    - "session_id"
+    - "correlation_id"
+    - "timestamp"
+    - "environment"
+    
+  optional_fields:
+    - "user_id"
+    - "task_type"
+    - "priority_level"
+    - "resource_usage"
+    - "performance_metrics"
+    
+  custom_fields:
+    hero_specific:
+      - "hero_session_id"
+      - "agent_framework"
+      - "coordination_pattern"
+      - "knowledge_source"
+      - "workflow_stage"
+
+# Run Types
+run_types:
+  # Core Agent Operations
+  agent_task:
+    type: "chain"
+    description: "Individual agent task execution"
+    default_tags: ["agent-execution"]
+    
+  workflow_orchestration:
+    type: "chain"
+    description: "Multi-agent workflow coordination"
+    default_tags: ["workflow", "orchestration"]
+    
+  knowledge_query:
+    type: "retriever"
+    description: "Knowledge graph query and retrieval"
+    default_tags: ["knowledge", "query"]
+    
+  # System Operations
+  monitoring_scan:
+    type: "tool"
+    description: "System monitoring and data collection"
+    default_tags: ["monitoring", "system"]
+    
+  performance_analysis:
+    type: "tool"
+    description: "Performance analysis and optimization"
+    default_tags: ["performance", "analysis"]
+    
+  # Integration Operations
+  chimera_bridge:
+    type: "chain"
+    description: "Chimera framework integration operations"
+    default_tags: ["chimera", "integration"]
+
+# Sampling Strategies
+sampling:
+  strategies:
+    production:
+      default_rate: 0.1  # 10% sampling in production
+      high_priority_rate: 1.0  # 100% for high priority
+      error_rate: 1.0  # 100% for errors
+      slow_operation_rate: 1.0  # 100% for slow operations
+      
+    staging:
+      default_rate: 0.5  # 50% sampling in staging
+      performance_testing_rate: 1.0
+      
+    development:
+      default_rate: 1.0  # 100% sampling in development
+      
+  rules:
+    - condition: "priority == 'URGENT'"
+      sampling_rate: 1.0
+      
+    - condition: "duration > 5000"  # > 5 seconds
+      sampling_rate: 1.0
+      
+    - condition: "error_occurred == true"
+      sampling_rate: 1.0
+      
+    - condition: "agent_type == 'knowledge_integration'"
+      sampling_rate: 0.8  # Higher sampling for knowledge ops
+
+# Performance Monitoring
+performance:
+  metrics:
+    latency:
+      - "trace_start_to_end"
+      - "agent_response_time"
+      - "knowledge_query_time"
+      - "workflow_completion_time"
+      
+    throughput:
+      - "tasks_per_second"
+      - "workflows_per_minute"
+      - "queries_per_second"
+      - "agents_utilized_concurrently"
+      
+    quality:
+      - "task_success_rate"
+      - "workflow_completion_rate"
+      - "knowledge_query_accuracy"
+      - "agent_performance_score"
+      
+  alerting:
+    thresholds:
+      high_latency: 5000  # ms
+      low_success_rate: 0.9  # 90%
+      high_error_rate: 0.05  # 5%
+      
+    channels:
+      - "hero_dashboard_alerts"
+      - "nats_monitoring_stream"
+      - "langsmith_notifications"
+
+# Data Retention
+retention:
+  traces:
+    development: "7d"
+    staging: "30d"
+    production: "90d"
+    
+  metrics:
+    development: "7d"
+    staging: "30d"
+    production: "180d"
+    
+  logs:
+    development: "3d"
+    staging: "14d"
+    production: "30d"
+
+# Export Configuration
+export:
+  enabled: true
+  formats: ["json", "csv", "parquet"]
+  
+  destinations:
+    local_cache:
+      path: "~/.hero_core/cache/langsmith_exports"
+      enabled: true
+      
+    s3_bucket:
+      bucket: "hero-langsmith-exports"
+      enabled: false  # Configure for production
+      
+    analytics_db:
+      connection_string: "${ANALYTICS_DB_URL}"
+      enabled: false  # Configure for production
+
+# Integration Hooks
+hooks:
+  pre_trace:
+    - "validate_trace_metadata"
+    - "enrich_with_agent_context"
+    - "apply_sampling_rules"
+    
+  post_trace:
+    - "calculate_performance_metrics"
+    - "update_agent_statistics"
+    - "trigger_alerts_if_needed"
+    - "export_to_cache"
+    
+  on_error:
+    - "log_error_details"
+    - "notify_monitoring_systems"
+    - "increment_error_counters"
+
+# Custom Trace Decorators
+decorators:
+  hero_function:
+    template: |
+      @traceable(
+          project_name="${project_name}",
+          name="${function_name}",
+          run_type="tool",
+          tags=["${agent_type}", "${category}"]
+      )
+      def ${function_name}(*args, **kwargs):
+          # Function implementation
+          pass
+          
+  agent_workflow:
+    template: |
+      @traceable(
+          project_name="${project_name}",
+          name="${workflow_name}",
+          run_type="chain",
+          tags=["${agent_type}", "workflow"]
+      )
+      def ${workflow_name}(*args, **kwargs):
+          # Workflow implementation
+          pass
+          
+  knowledge_operation:
+    template: |
+      @traceable(
+          project_name="${project_name}",
+          name="${operation_name}",
+          run_type="retriever",
+          tags=["knowledge", "${operation_type}"]
+      )
+      def ${operation_name}(*args, **kwargs):
+          # Knowledge operation implementation
+          pass
+
+# Environment-Specific Overrides
+environments:
+  development:
+    tracing:
+      enabled: true
+      sampling_rate: 1.0
+      trace_level: "detailed"
+    export:
+      local_cache_only: true
+      
+  staging:
+    tracing:
+      enabled: true
+      sampling_rate: 0.5
+      trace_level: "standard"
+    performance:
+      enhanced_monitoring: true
+      
+  production:
+    tracing:
+      enabled: true
+      sampling_rate: 0.1
+      trace_level: "summary"
+    export:
+      all_destinations: true
+    retention:
+      extended: true
+    security:
+      pii_filtering: true
+      data_encryption: true
