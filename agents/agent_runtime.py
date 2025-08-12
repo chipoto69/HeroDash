@@ -472,15 +472,22 @@ class AgentRuntime:
                 (datetime.now() - self.runtime_stats["start_time"]).total_seconds()
             )
             
+            # Create JSON-serializable runtime stats
+            runtime_stats_serializable = {
+                key: value.isoformat() if isinstance(value, datetime) else value
+                for key, value in self.runtime_stats.items()
+            }
+            
             status_data = {
                 "timestamp": datetime.now().isoformat(),
-                "runtime_stats": self.runtime_stats,
+                "runtime_stats": runtime_stats_serializable,
                 "agents": {
                     agent_id: {
                         "agent_type": agent.agent_type,
                         "status": agent.status,
                         "current_task": agent.current_task,
-                        "performance": agent.performance_metrics
+                        "performance": agent.performance_metrics,
+                        "last_heartbeat": agent.last_heartbeat.isoformat() if hasattr(agent, 'last_heartbeat') and agent.last_heartbeat else None
                     }
                     for agent_id, agent in self.agents.items()
                 },
