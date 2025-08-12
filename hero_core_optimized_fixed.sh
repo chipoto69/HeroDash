@@ -29,7 +29,10 @@ HERO_LOG="$HERO_HOME/hero.log"
 HERO_CACHE="$HERO_HOME/cache"
 GRAPHITI_STATS="$HERO_CACHE/graphiti_stats.json"
 CLAUDE_USAGE="$HERO_CACHE/claude_usage.json"
+TOKEN_ANALYSIS="$HERO_CACHE/token_analysis.json"
 GITHUB_ACTIVITY="$HERO_CACHE/github_activity.json"
+AGENTS_STATUS="$HERO_CACHE/agents_status.json"
+CODE_ACTIVITY="$HERO_CACHE/code_activity.json"
 REFRESH_RATE=3
 LAZY_REFRESH_COUNTER=0
 LAZY_REFRESH_INTERVAL=10  # Refresh token data every 10 cycles (30 seconds)
@@ -52,6 +55,16 @@ show_cursor() { tput cnorm 2>/dev/null; }
 get_term_size() {
     TERM_WIDTH=$(tput cols 2>/dev/null || echo 140)
     TERM_HEIGHT=$(tput lines 2>/dev/null || echo 50)
+    # Dynamic layout to reduce wrapping on narrow terminals
+    LEFT_COL=2
+    RIGHT_COL=$(( TERM_WIDTH > 90 ? TERM_WIDTH/2 + 2 : TERM_WIDTH - 38 ))
+    if [ "$RIGHT_COL" -lt 40 ]; then RIGHT_COL=40; fi
+    LEFT_WIDTH=$(( RIGHT_COL - LEFT_COL - 4 ))
+    [ "$LEFT_WIDTH" -lt 20 ] && LEFT_WIDTH=20
+    RIGHT_WIDTH=$(( TERM_WIDTH - RIGHT_COL - 4 ))
+    [ "$RIGHT_WIDTH" -lt 20 ] && RIGHT_WIDTH=20
+    STATUS_ROW=$(( TERM_HEIGHT - 4 ))
+    [ "$STATUS_ROW" -lt 24 ] && STATUS_ROW=24
 }
 
 # Cached command execution (simplified for compatibility)
@@ -94,16 +107,29 @@ init() {
     mkdir -p "$HERO_HOME"
     mkdir -p "$HERO_CACHE"
     touch "$HERO_LOG"
+    dbg "init start"
     hide_cursor
     clear
     
-    # Stop any other dashboards
-    pkill -f "nexus_dashboard" 2>/dev/null
-    pkill -f "hero_dashboard" 2>/dev/null
+    # Stop any other dashboards (avoid killing self)
+    for pat in "nexus_dashboard" "hero_dashboard"; do
+        if command -v pgrep >/dev/null 2>&1; then
+            pgrep -f "$pat" 2>/dev/null | while read -r pid; do
+                [ -z "$pid" ] && continue
+                if [ "$pid" != "$$" ] && [ "$pid" != "$PPID" ]; then
+                    kill "$pid" 2>/dev/null || true
+                fi
+            done
+        else
+            # Fallback: best effort without pgrep (macOS has pgrep by default)
+            pkill -f "$pat" 2>/dev/null || true
+        fi
+    done
     sleep 0.5
     
     # Initial data fetch
     update_lazy_data
+    dbg "init done"
 }
 
 # Cleanup
@@ -127,10 +153,21 @@ update_lazy_data() {
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" ]; then
         python3 /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py > /dev/null 2>&1 &
     fi
+    # Analyze token trends
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py" ]; then
+        python3 /Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py > /dev/null 2>&1 &
+    fi
     
     # Update GitHub activity data
     if [ -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" ]; then
         python3 /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py > /dev/null 2>&1 &
+    fi
+    # Update agents and code activity
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/agents_monitor.py" ]; then
+        python3 /Users/rudlord/Hero_dashboard/monitors/agents_monitor.py > /dev/null 2>&1 &
+    fi
+    if [ -f "/Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py" ]; then
+        python3 /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py > /dev/null 2>&1 &
     fi
 }
 
@@ -187,13 +224,15 @@ update_claude_usage_section() {
             # Token usage with bar
             move_cursor $((row+2)) $((col+2))
             clear_to_eol
-            printf "Tokens: ${WHITE}%s${NC}/${GRAY}%s${NC}" "$(printf "%'d" $tokens)" "$(printf "%'d" $limit)"
+            # Keep compact formatting (no locale thousands separators) to avoid wrapping
+            printf "Tokens: ${WHITE}%d${NC}/${GRAY}%d${NC}" "$tokens" "$limit"
             
             # Usage bar
             move_cursor $((row+3)) $((col+2))
             clear_to_eol
             printf "["
-            local bar_width=15
+            local bar_width=$(( LEFT_WIDTH - 12 ))
+            [ $bar_width -lt 10 ] && bar_width=10
             local filled=$((percentage * bar_width / 100))
             for ((i=0; i<bar_width; i++)); do
                 if [ $i -lt $filled ]; then
@@ -209,6 +248,19 @@ update_claude_usage_section() {
                 fi
             done
             echo -ne "${NC}] ${WHITE}${percentage}%${NC}"
+
+            # Trend info
+            if [ -f "$TOKEN_ANALYSIS" ]; then
+                local trend=$(cat "$TOKEN_ANALYSIS" | (jq -r '.trend // "flat"' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('trend','flat'))" 2>/dev/null || echo flat))
+                local avg=$(cat "$TOKEN_ANALYSIS" | (jq -r '.avg_tokens_per_sample // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('avg_tokens_per_sample',0))" 2>/dev/null || echo 0))
+                move_cursor $((row+4)) $((col+2))
+                clear_to_eol
+                case "$trend" in
+                    high) printf "Trend: ${RED}high${NC}  Avg Δ: ${WHITE}%s${NC}" "$avg" ;;
+                    medium) printf "Trend: ${YELLOW}medium${NC}  Avg Δ: ${WHITE}%s${NC}" "$avg" ;;
+                    *) printf "Trend: ${GREEN}flat${NC}  Avg Δ: ${WHITE}%s${NC}" "$avg" ;;
+                esac
+            fi
         fi
     else
         move_cursor $((row+1)) $((col+2))
@@ -219,7 +271,7 @@ update_claude_usage_section() {
 
 # GitHub Activity Section
 update_github_activity_section() {
-    local row=16
+    local row=18
     local col=2
     
     move_cursor $row $col
@@ -241,26 +293,28 @@ update_github_activity_section() {
                 local streak=$(echo "$activity_data" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('streak', 0))" 2>/dev/null || echo "0")
             fi
             
-            # Activity graph
-            move_cursor $((row+1)) $((col+2))
-            clear_to_eol
-            if [ -n "$graph" ]; then
-                # Color the graph based on activity
-                colored_graph=""
-                for ((i=0; i<${#graph}; i++)); do
-                    char="${graph:$i:1}"
-                    case "$char" in
-                        "·") colored_graph+="${DARK}·${NC}" ;;
-                        "▫") colored_graph+="${GREEN}▫${NC}" ;;
-                        "▪") colored_graph+="${GREEN}▪${NC}" ;;
-                        "◼") colored_graph+="${GREEN}◼${NC}" ;;
-                        "█") colored_graph+="${GREEN}█${NC}" ;;
-                        *) colored_graph+="$char" ;;
-                    esac
-                done
-                echo -ne "Graph: $colored_graph"
-            else
-                echo -ne "Graph: ${GRAY}No data${NC}"
+            # Activity graph (skip on narrow left panel to prevent wrapping)
+            if [ $LEFT_WIDTH -ge 40 ]; then
+                move_cursor $((row+1)) $((col+2))
+                clear_to_eol
+                if [ -n "$graph" ]; then
+                    # Color the graph based on activity
+                    colored_graph=""
+                    for ((i=0; i<${#graph}; i++)); do
+                        char="${graph:$i:1}"
+                        case "$char" in
+                            "·") colored_graph+="${DARK}·${NC}" ;;
+                            "▫") colored_graph+="${GREEN}▫${NC}" ;;
+                            "▪") colored_graph+="${GREEN}▪${NC}" ;;
+                            "◼") colored_graph+="${GREEN}◼${NC}" ;;
+                            "█") colored_graph+="${GREEN}█${NC}" ;;
+                            *) colored_graph+="$char" ;;
+                        esac
+                    done
+                    echo -ne "Graph: $colored_graph"
+                else
+                    echo -ne "Graph: ${GRAY}No data${NC}"
+                fi
             fi
             
             # Stats
@@ -277,7 +331,7 @@ update_github_activity_section() {
 
 # AI Systems Section (moved down)
 update_ai_section() {
-    local row=20
+    local row=22
     local col=2
     
     move_cursor $row $col
@@ -296,28 +350,30 @@ update_ai_section() {
         printf "${DARK}○${NC} Claude: ${GRAY}off${NC}"
     fi
     
-    # Qwen
-    move_cursor $((row+1)) $((col+15))
-    if echo "$ps_output" | grep -q "qwen"; then
-        printf "${ORANGE}●${NC} Qwen: ${ORANGE}on${NC}"
-    else
-        printf "${DARK}○${NC} Qwen: ${GRAY}off${NC}"
-    fi
-    
-    # VS Code
-    local vscode_count=$(echo "$ps_output" | grep -c "Code Helper" 2>/dev/null || echo "0")
-    move_cursor $((row+1)) $((col+28))
-    if [ "$vscode_count" -gt 0 ]; then
-        printf "${PURPLE}●${NC} VSCode: ${PURPLE}%d${NC}" "$vscode_count"
-    else
-        printf "${DARK}○${NC} VSCode: ${GRAY}off${NC}"
+    if [ $LEFT_WIDTH -ge 36 ]; then
+        # Qwen
+        move_cursor $((row+1)) $((col+15))
+        if echo "$ps_output" | grep -q "qwen"; then
+            printf "${ORANGE}●${NC} Qwen: ${ORANGE}on${NC}"
+        else
+            printf "${DARK}○${NC} Qwen: ${GRAY}off${NC}"
+        fi
+        
+        # VS Code
+        local vscode_count=$(echo "$ps_output" | grep -c "Code Helper" 2>/dev/null || echo "0")
+        move_cursor $((row+1)) $((col+28))
+        if [ "$vscode_count" -gt 0 ]; then
+            printf "${PURPLE}●${NC} VSCode: ${PURPLE}%d${NC}" "$vscode_count"
+        else
+            printf "${DARK}○${NC} VSCode: ${GRAY}off${NC}"
+        fi
     fi
 }
 
 # Chimera Knowledge Base Section (right side)
 update_chimera_section() {
     local row=11
-    local col=45
+    local col=$RIGHT_COL
     
     move_cursor $row $col
     echo -e "${MAGENTA}[ CHIMERA KB ]${NC}"
@@ -354,14 +410,22 @@ update_chimera_section() {
 # System Metrics Section (right side)
 update_system_section() {
     local row=16
-    local col=45
+    local col=$RIGHT_COL
     
     move_cursor $row $col
     echo -e "${CYAN}[ SYSTEM ]${NC}"
     
-    # CPU - cache for 2 seconds
-    local top_output=$(cached_cmd "top -l 1" 2)
-    local cpu=$(echo "$top_output" | grep "CPU usage" | awk '{print $3}' | cut -d% -f1 | cut -d. -f1 || echo "0")
+    # CPU - prefer psutil, fallback to parsing top
+    local cpu=$(python3 - <<'PY' 2>/dev/null || echo "")
+import psutil
+print(int(psutil.cpu_percent(interval=0.2)))
+PY
+)
+    if [ -z "$cpu" ]; then
+        local top_output=$(cached_cmd "top -l 1" 2)
+        cpu=$(echo "$top_output" | awk -F'[ ,]+' '/CPU usage/{for(i=1;i<=NF;i++){if($i ~ /idle/){gsub(/[^0-9.]/,"",$(i-1)); idle=$(i-1)}}} END{if(idle=="") idle=0; print int(100-idle)}' 2>/dev/null | head -n1)
+        [ -z "$cpu" ] && cpu=0
+    fi
     move_cursor $((row+1)) $((col+2))
     clear_to_eol
     printf "CPU: ${WHITE}%3s%%${NC}" "$cpu"
@@ -376,9 +440,96 @@ print(int(psutil.virtual_memory().percent))
     printf "MEM: ${WHITE}%3s%%${NC}" "$mem"
 }
 
+# Agents & Processes Section (left)
+update_agents_section() {
+    local row=15
+    local col=2
+    move_cursor $row $col
+    echo -e "${CYAN}[ AGENTS & PROCESSES ]${NC}"
+
+    if [ -f "$AGENTS_STATUS" ]; then
+        local data=$(cat "$AGENTS_STATUS" 2>/dev/null)
+        local total=$(echo "$data" | (jq -r '.total_agents // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_agents',0))" 2>/dev/null || echo 0))
+        local models=$(echo "$data" | (jq -r '.buckets.models // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('models',0))" 2>/dev/null || echo 0))
+        local editors=$(echo "$data" | (jq -r '.buckets.editors // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('buckets',{}).get('editors',0))" 2>/dev/null || echo 0))
+        move_cursor $((row+1)) $((col+2))
+        clear_to_eol
+        printf "Total: ${WHITE}%d${NC}  Models: ${WHITE}%d${NC}  Editors: ${WHITE}%d${NC}" "$total" "$models" "$editors"
+
+        # Top processes
+        local top_list
+        if command -v jq >/dev/null 2>&1; then
+            top_list=$(echo "$data" | jq -r '.top[] | "\(.cpu)% CPU · \(.mem)% MEM · PID \(.pid) · \(.name)"' 2>/dev/null | head -3)
+        else
+            top_list=$(echo "$data" | python3 - <<'PY'
+import sys, json
+d=json.load(sys.stdin)
+for i, t in enumerate(d.get('top', [])[:3]):
+    print(f"{t.get('cpu',0)}% CPU · {t.get('mem',0)}% MEM · PID {t.get('pid','-')} · {t.get('name','')}")
+PY
+)
+        fi
+        local i=0
+        while IFS= read -r line; do
+            move_cursor $((row+2+i)) $((col+2))
+            clear_to_eol
+            # Trim to panel width to avoid wrapping
+            printf "%s" "${line:0:$LEFT_WIDTH}"
+            i=$((i+1))
+        done <<< "$top_list"
+    else
+        move_cursor $((row+1)) $((col+2))
+        clear_to_eol
+        echo -ne "${GRAY}Scanning processes...${NC}"
+    fi
+}
+
+# Code Activity Section (right)
+update_code_activity_section() {
+    local row=20
+    local col=$RIGHT_COL
+    move_cursor $row $col
+    echo -e "${MAGENTA}[ CODE ACTIVITY - 7D ]${NC}"
+
+    if [ -f "$CODE_ACTIVITY" ]; then
+        local data=$(cat "$CODE_ACTIVITY" 2>/dev/null)
+        local repos=$(echo "$data" | (jq -r '.total_repos // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_repos',0))" 2>/dev/null || echo 0))
+        local ins=$(echo "$data" | (jq -r '.total_insertions // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_insertions',0))" 2>/dev/null || echo 0))
+        local del=$(echo "$data" | (jq -r '.total_deletions // 0' 2>/dev/null || python3 -c "import sys,json;print(json.load(sys.stdin).get('total_deletions',0))" 2>/dev/null || echo 0))
+        move_cursor $((row+1)) $((col+2))
+        clear_to_eol
+        printf "Repos: ${WHITE}%d${NC}  +${GREEN}%d${NC} / -${RED}%d${NC}" "$repos" "$ins" "$del"
+
+        # Show first repo sparkline
+        local repo0
+        if command -v jq >/dev/null 2>&1; then
+            repo0=$(echo "$data" | jq -r '.repos[0] | "\(.branch) · \(.spark_commits) · \(.path)"' 2>/dev/null)
+        else
+            repo0=$(echo "$data" | python3 - <<'PY'
+import sys, json
+d=json.load(sys.stdin)
+r=d.get('repos', [{}])[:1]
+if r:
+    r=r[0]
+    print(f"{r.get('branch','-')} · {r.get('spark_commits','')} · {r.get('path','')}")
+PY
+)
+        fi
+        if [ -n "$repo0" ]; then
+            move_cursor $((row+2)) $((col+2))
+            clear_to_eol
+            printf "%s" "${repo0:0:$RIGHT_WIDTH}"
+        fi
+    else
+        move_cursor $((row+1)) $((col+2))
+        clear_to_eol
+        echo -ne "${GRAY}Analyzing git activity...${NC}"
+    fi
+}
+
 # Status bar
 draw_status_bar() {
-    local row=24
+    local row=$STATUS_ROW
     
     move_cursor $row 1
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -433,37 +584,40 @@ initial_display() {
 
 # Update display
 update_display() {
+    dbg "update_display tick"
     # Increment lazy refresh counter
     LAZY_REFRESH_COUNTER=$((LAZY_REFRESH_COUNTER + 1))
     
     # Update lazy data periodically
     if [ $((LAZY_REFRESH_COUNTER % LAZY_REFRESH_INTERVAL)) -eq 0 ]; then
-        update_lazy_data
+        update_lazy_data || dbg "update_lazy_data failed"
     fi
     
     # Always update these sections
-    update_ai_section
-    update_chimera_section
-    update_system_section
+    update_agents_section || dbg "agents section failed"
+    update_chimera_section || dbg "chimera section failed"
+    update_system_section || dbg "system section failed"
     
     # Update token and GitHub sections (uses cached data)
-    update_claude_usage_section
-    update_github_activity_section
+    update_claude_usage_section || dbg "claude section failed"
+    update_github_activity_section || dbg "github section failed"
+    update_code_activity_section || dbg "code section failed"
     
     draw_status_bar
     
     # Reset cursor position
-    move_cursor 28 1
+    move_cursor $((STATUS_ROW + 6)) 1
 }
 
 # Main loop
 main() {
+    dbg "main start"
     init
     log_event "Hero Core Enhanced started"
     initial_display
     
     while true; do
-        update_display
+        update_display || dbg "update_display errored"
         
         # Read with timeout
         if read -t $REFRESH_RATE -n 1 key 2>/dev/null; then
@@ -517,6 +671,12 @@ main() {
             esac
         fi
     done
+# Debug helper
+dbg() {
+    [ -n "$HERO_DEBUG" ] || return 0
+    echo "$(date '+%Y-%m-%d %H:%M:%S') | DBG | $1" >> "$HERO_LOG"
+}
+    dbg "main loop exit"
 }
 
 # Start
