@@ -1,0 +1,254 @@
+# Agent Capabilities Configuration
+# Defines the capabilities and specifications for all agents in the Hero Command Centre
+
+version: "2.0"
+updated: "2025-08-12"
+
+# Core Agent Definitions
+agents:
+  task_orchestrator:
+    id: "task-orchestrator-001"
+    type: "coordination"
+    framework: "hero-command-centre"
+    priority: "critical"
+    
+    capabilities:
+      - "task_distribution"
+      - "workflow_orchestration" 
+      - "load_balancing"
+      - "agent_coordination"
+      - "priority_management"
+      - "failure_handling"
+      - "resource_optimization"
+      - "parallel_execution"
+      - "dependency_resolution"
+      
+    specialized_functions:
+      - "multi_agent_coordination"
+      - "workflow_pattern_recognition"
+      - "predictive_task_assignment"
+      - "cascade_failure_prevention"
+      - "dynamic_load_balancing"
+      
+    communication:
+      nats_subjects:
+        - "hero.v1.{env}.orchestrator.*"
+        - "hero.v1.{env}.agents.*.task_complete"
+        - "hero.v1.{env}.agents.*.status_update"
+        - "hero.v1.{env}.workflow.*"
+      message_types:
+        - "task_assignment"
+        - "workflow_control"
+        - "agent_status_request"
+        - "load_balance_command"
+        
+    performance_requirements:
+      response_time_ms: 100
+      throughput_tasks_per_second: 50
+      availability_percentage: 99.9
+      max_concurrent_workflows: 25
+      
+    resource_limits:
+      max_memory_mb: 512
+      max_cpu_percentage: 30
+      max_concurrent_connections: 100
+      cache_size_mb: 128
+
+  knowledge_integration:
+    id: "knowledge-integration-001"
+    type: "intelligence"
+    framework: "hero-command-centre"
+    priority: "critical"
+    
+    capabilities:
+      - "knowledge_graph_management"
+      - "temporal_fact_storage"
+      - "semantic_search"
+      - "pattern_recognition"
+      - "context_preservation"
+      - "insight_generation"
+      - "memory_consolidation"
+      - "query_intelligence"
+      - "relationship_modeling"
+      
+    specialized_functions:
+      - "graphiti_temporal_operations"
+      - "chromadb_semantic_operations"
+      - "neo4j_hypergraph_operations"
+      - "multi_modal_knowledge_synthesis"
+      - "predictive_pattern_analysis"
+      
+    communication:
+      nats_subjects:
+        - "hero.v1.{env}.knowledge.*"
+        - "hero.v1.{env}.agents.*.interaction"
+        - "hero.v1.{env}.monitors.*.data"
+        - "hero.v1.{env}.insights.*"
+      message_types:
+        - "knowledge_update"
+        - "context_request"
+        - "insight_generation"
+        - "pattern_alert"
+        
+    performance_requirements:
+      response_time_ms: 500
+      query_throughput_per_second: 20
+      availability_percentage: 99.5
+      knowledge_update_latency_ms: 200
+      
+    resource_limits:
+      max_memory_mb: 1024
+      max_cpu_percentage: 40
+      max_graph_nodes: 100000
+      cache_size_mb: 256
+
+# Capability Categories
+capability_categories:
+  coordination:
+    description: "Task and workflow coordination capabilities"
+    agents: ["task_orchestrator"]
+    capabilities:
+      - "task_distribution"
+      - "workflow_orchestration"
+      - "load_balancing"
+      - "agent_coordination"
+      - "priority_management"
+      
+  intelligence:
+    description: "Knowledge management and insight generation"
+    agents: ["knowledge_integration"]
+    capabilities:
+      - "knowledge_graph_management"
+      - "semantic_search"
+      - "pattern_recognition"
+      - "insight_generation"
+      - "context_preservation"
+      
+  monitoring:
+    description: "System and performance monitoring"
+    agents: ["agents_monitor", "langsmith_tracer", "chimera_bridge"]
+    capabilities:
+      - "system_monitoring"
+      - "performance_tracking"
+      - "health_assessment"
+      - "alert_generation"
+      - "data_collection"
+      
+  specialized:
+    description: "Domain-specific specialized capabilities"
+    agents: ["chimera_embedder", "chimera_retriever", "chimera_memory"]
+    capabilities:
+      - "text_embedding"
+      - "document_retrieval"
+      - "memory_management"
+      - "semantic_analysis"
+      - "vector_search"
+
+# Capability Compatibility Matrix
+compatibility_matrix:
+  task_distribution:
+    requires: ["agent_discovery", "capability_assessment"]
+    enhances: ["workflow_orchestration", "load_balancing"]
+    conflicts: []
+    
+  knowledge_graph_management:
+    requires: ["temporal_storage", "relationship_modeling"]
+    enhances: ["pattern_recognition", "insight_generation"]
+    conflicts: []
+    
+  workflow_orchestration:
+    requires: ["task_distribution", "dependency_resolution"]
+    enhances: ["parallel_execution", "resource_optimization"]
+    conflicts: []
+    
+  semantic_search:
+    requires: ["vector_embeddings", "similarity_matching"]
+    enhances: ["context_preservation", "query_intelligence"]
+    conflicts: []
+
+# Performance Tiers
+performance_tiers:
+  tier_1_critical:
+    description: "Mission-critical capabilities requiring highest performance"
+    capabilities:
+      - "task_distribution"
+      - "knowledge_graph_management"
+      - "workflow_orchestration"
+    requirements:
+      max_latency_ms: 100
+      min_availability: 99.9
+      max_error_rate: 0.01
+      
+  tier_2_important:
+    description: "Important capabilities with moderate performance requirements"
+    capabilities:
+      - "pattern_recognition"
+      - "insight_generation"
+      - "load_balancing"
+    requirements:
+      max_latency_ms: 500
+      min_availability: 99.5
+      max_error_rate: 0.05
+      
+  tier_3_supporting:
+    description: "Supporting capabilities with relaxed performance requirements"
+    capabilities:
+      - "data_collection"
+      - "health_assessment"
+      - "memory_consolidation"
+    requirements:
+      max_latency_ms: 2000
+      min_availability: 99.0
+      max_error_rate: 0.1
+
+# Scaling Policies
+scaling_policies:
+  horizontal_scaling:
+    applicable_capabilities:
+      - "task_distribution"
+      - "semantic_search"
+      - "data_collection"
+    trigger_conditions:
+      cpu_threshold: 70
+      memory_threshold: 80
+      queue_length_threshold: 100
+      
+  vertical_scaling:
+    applicable_capabilities:
+      - "knowledge_graph_management"
+      - "pattern_recognition"
+      - "workflow_orchestration"
+    trigger_conditions:
+      memory_pressure: true
+      processing_complexity: "high"
+      cache_miss_rate: 0.3
+
+# Integration Specifications
+integration_specs:
+  langsmith_tracing:
+    required_for:
+      - "task_distribution"
+      - "workflow_orchestration"
+      - "knowledge_graph_management"
+    trace_levels:
+      - "function_entry_exit"
+      - "performance_metrics"
+      - "error_conditions"
+      - "workflow_correlation"
+      
+  nats_messaging:
+    required_for:
+      - "task_distribution"
+      - "agent_coordination"
+      - "knowledge_sharing"
+    message_patterns:
+      - "request_response"
+      - "publish_subscribe"
+      - "stream_processing"
+      
+  hero_dashboard:
+    reporting_requirements:
+      - "real_time_status"
+      - "performance_metrics"
+      - "health_indicators"
+      - "alert_notifications"
