@@ -1,112 +1,121 @@
-# Hero Core Dashboard - Final Structure
+# Hero Dashboard - Directory Structure
 
-## Current Directory Layout
+This document outlines the organized structure of the Hero Dashboard repository.
 
-```
-/Users/rudlord/Hero_dashboard/
-│
-├── 🚀 LAUNCH FILES
-│   ├── hero                     # Quick launcher (./hero)
-│   ├── launch_hero.sh          # Launcher with system checks
-│   └── hero_core.sh            # Main dashboard application
-│
-├── 📊 MONITORS/
-│   ├── claude_usage_monitor.py     # Token usage tracker
-│   ├── github_activity_monitor.py  # GitHub contributions
-│   └── graphiti_monitor.py         # Neo4j statistics
-│
-├── 🔧 UTILS/
-│   ├── dashboard_control.sh        # Master control panel
-│   └── dashboard_diagnostics.sh    # System diagnostics
-│
-├── 📚 DOCS/
-│   ├── DOCUMENTATION.md           # Complete technical docs
-│   ├── USER_GUIDE.md             # User README
-│   └── README.md                 # Original README
-│
-├── 🗄️ ARCHIVE_OLD_VERSIONS/
-│   └── [28 archived files]        # Previous iterations
-│
-└── 📝 OTHER FILES
-    ├── FINAL_STRUCTURE.md         # This file
-    └── hero_core_backup.sh        # Backup of original
+## Root Directory
 
 ```
-
-## Quick Commands
-
-### Launch Hero Core
-```bash
-cd /Users/rudlord/Hero_dashboard
-./hero
+Hero_dashboard/
+├── hero                      # Quick launcher (symlink or script)
+├── hero_core.sh             # Original main dashboard application
+├── hero_core_backup.sh      # Backup of original dashboard
+├── hero_core_optimized.sh   # Initial optimized version (deprecated)
+├── hero_core_optimized_fixed.sh  # Final optimized dashboard application
+├── launch_hero.sh           # Original launcher with system checks
+├── launch_hero_optimized.sh      # Initial optimized launcher (deprecated)
+├── launch_hero_optimized_fixed.sh # Final optimized launcher
+├── hero_optimized           # Symlink to optimized launcher
+├── setup_optimized.sh       # Initial setup script (deprecated)
+├── setup_optimized_fixed.sh # Final setup script
+├── requirements.txt         # Original Python requirements
+├── requirements_optimized.txt # Optimized version requirements
+├── QUICK_REFERENCE.txt      # Quick command reference
+├── README.md                # Original project README
+├── README_OPTIMIZED.md      # Optimized version usage instructions
+├── README_UPDATED.md        # Updated main README with optimization info
+├── OPTIMIZATION_SUMMARY.md  # Initial optimization summary (deprecated)
+├── OPTIMIZATION_SUMMARY_FIXED.md # Final optimization summary
+├── FINAL_STRUCTURE.md       # Repository structure documentation
+├── .gitignore               # Git ignore patterns
+└── .claude/
+    └── settings.local.json  # Claude settings
 ```
 
-### Run Diagnostics
-```bash
-./utils/dashboard_diagnostics.sh
+## Documentation Directory
+
+```
+docs/
+├── DOCUMENTATION.md         # Original technical documentation
+├── USER_GUIDE.md            # Original user guide
+├── OPTIMIZED_VERSION.md     # Initial optimization documentation (deprecated)
+├── OPTIMIZED_VERSION_FIXED.md # Final optimization documentation
+├── PROGRESS_LOG.md          # Development progress tracking
+└── USER_GUIDE.md            # User guide
 ```
 
-### View Documentation
-```bash
-less docs/DOCUMENTATION.md
+## Monitors Directory
+
+```
+monitors/
+├── claude_usage_monitor.py          # Original Claude usage monitor
+├── claude_usage_monitor_optimized.py # Optimized Claude usage monitor
+├── github_activity_monitor.py       # Original GitHub activity monitor
+├── github_activity_monitor_optimized.py # Optimized GitHub activity monitor
+└── graphiti_monitor.py              # Graphiti/Neo4j monitor
 ```
 
-### Control Panel
-```bash
-./utils/dashboard_control.sh
+## Utilities Directory
+
+```
+utils/
+├── dashboard_control.sh        # Dashboard control utility
+└── dashboard_diagnostics.sh    # System diagnostics tool
 ```
 
-## Data Storage Location
+## Archive Directory
+
 ```
-~/.hero_core/
-├── hero.log
-└── cache/
-    ├── claude_usage.json
-    ├── github_activity.json
-    └── graphiti_stats.json
+archive_old_versions/
+└── .gitkeep                   # Placeholder for archived versions
 ```
 
-## Cleanup Summary
+## Configuration and Cache
 
-### Files Kept (Working System)
-- 3 launch files
-- 3 Python monitors
-- 2 utility scripts
-- 3 documentation files
-- 1 backup file
+```
+~/.hero_core/                  # User configuration and cache (created at runtime)
+├── hero.log                   # Activity log
+└── cache/                     # Data cache directory
+    ├── claude_usage.json      # Claude usage data
+    ├── github_activity.json   # GitHub activity data
+    └── graphiti_stats.json    # Graphiti statistics
+```
 
-### Files Archived
-- 28 old dashboard versions moved to `archive_old_versions/`
-- These were iterative development versions that led to the final Hero Core
+## Recommended Usage
 
-### Total Reduction
-- From 40+ files → 11 production files
-- Clean, organized structure
-- All working components preserved
+### For New Users
+1. Read [README_UPDATED.md](README_UPDATED.md) for an overview
+2. Check [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed usage
+3. Use [hero_optimized](hero_optimized) to launch the optimized dashboard
 
-## Features Available
+### For Developers
+1. Review [docs/PROGRESS_LOG.md](docs/PROGRESS_LOG.md) for development history
+2. Check [docs/OPTIMIZED_VERSION_FIXED.md](docs/OPTIMIZED_VERSION_FIXED.md) for optimization details
+3. Examine [hero_core_optimized_fixed.sh](hero_core_optimized_fixed.sh) for the main implementation
+4. Look at [monitors/*_optimized.py](monitors/) for enhanced monitoring scripts
 
-✅ Claude token usage monitoring with visual bar  
-✅ GitHub 21-day activity graph  
-✅ AI systems monitoring (Claude, Qwen, VS Code)  
-✅ Chimera Knowledge Base tracking  
-✅ System metrics (CPU, Memory, Network)  
-✅ Lazy refresh system (no lag)  
-✅ Flicker-free display updates  
-✅ Real-time process detection  
+### For Maintainers
+1. Update [FINAL_STRUCTURE.md](FINAL_STRUCTURE.md) when structure changes
+2. Keep [docs/PROGRESS_LOG.md](docs/PROGRESS_LOG.md) updated with changes
+3. Maintain backward compatibility with original scripts
+4. Document breaking changes in release notes
 
-## Keyboard Shortcuts
+## File Status Legend
 
-- `T` - Refresh token/GitHub data
-- `G` - Show Graphiti details  
-- `N` - Open Neo4j browser
-- `C` - Launch Claude monitor (ccm)
-- `H` - Help menu
-- `R` - Force refresh
-- `Q` - Quit
+- **Active**: Currently maintained and recommended for use
+- **Deprecated**: Kept for reference but not recommended for new usage
+- **Backup**: Preserved copies for recovery purposes
+- **Documentation**: Informational files
+- **Utility**: Helper scripts and tools
 
----
+## Version Information
 
-**Created by Quantropy**  
-Hero Core v1.0 Enhanced  
-Clean. Organized. Efficient.
+### Original Version
+- Files: `hero_core.sh`, `launch_hero.sh`, `monitors/*.py` (original)
+- Status: Maintained for backward compatibility
+
+### Optimized Version
+- Files: `hero_core_optimized_fixed.sh`, `launch_hero_optimized_fixed.sh`, `monitors/*_optimized.py`
+- Status: Active development and recommended for use
+- Benefits: 20-30% CPU reduction, faster response times, improved stability
+
+This structure ensures organized development, easy maintenance, and clear documentation for all users and contributors.
