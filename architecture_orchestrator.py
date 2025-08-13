@@ -91,14 +91,25 @@ class ArchitectureTeam:
         }
         
         self.project_state = {
-            "project_name": "Architecture Upgrade Implementation",
+            "project_name": "Chimera + Architecture Upgrade Implementation",
             "phase": "planning",
             "started": datetime.now().isoformat(),
             "tasks": [],
             "completed_tasks": [],
             "active_tasks": [],
-            "next_milestone": "Initial Architecture Design",
-            "coordination_messages": []
+            "next_milestone": "Chimera System Integration with New Architecture",
+            "coordination_messages": [],
+            "projects": {
+                "chimera": {
+                    "lead": "chimera_lead",
+                    "team": ["fe_coding_assistant", "be_coding_assistant"],
+                    "status": "active"
+                },
+                "architecture": {
+                    "team": ["documentation_orchestrator", "architecture_coder"],
+                    "status": "planning"
+                }
+            }
         }
         
         self.message_queue = []
