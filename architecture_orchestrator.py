@@ -29,57 +29,64 @@ class ArchitectureTeam:
         self.cache_dir = Path.home() / ".hero_core" / "cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # Your agent team configuration
+        # Chimera Project Team Configuration
         self.agents = {
-            "architect": {
+            "chimera_lead": {
                 "pid": 1181,
-                "name": "Architect",
-                "role": "Project Lead & Architecture Design",
-                "capabilities": ["system_design", "feature_planning", "architecture_decisions"],
+                "name": "Chimera Lead",
+                "role": "Chimera Project Lead & Architecture Designer",
+                "capabilities": ["chimera_architecture", "ai_coordination", "project_leadership", "system_design"],
                 "status": "active",
                 "current_task": None,
                 "tasks_completed": 0,
-                "coordination_priority": 1  # Highest priority
+                "coordination_priority": 1,  # Highest priority - Project Lead
+                "project": "Chimera"
             },
-            "ampcode": {
+            "fe_coding_assistant": {
                 "pid": 88050,
-                "name": "Ampcode",
-                "role": "Primary Coder - Fast Implementation",
-                "capabilities": ["rapid_coding", "feature_implementation", "performance_optimization"],
+                "name": "Ampcode (FE Assistant)",
+                "role": "Frontend Coding Assistant",
+                "capabilities": ["frontend_development", "react_components", "ui_implementation", "rapid_coding"],
                 "status": "active", 
                 "current_task": None,
                 "tasks_completed": 0,
-                "coordination_priority": 2
+                "coordination_priority": 2,
+                "project": "Chimera",
+                "reports_to": "chimera_lead"
             },
-            "ampcode2": {
+            "be_coding_assistant": {
                 "pid": 57730,
-                "name": "Ampcode2",
-                "role": "Secondary Coder - Support & Refinement",
-                "capabilities": ["code_review", "bug_fixes", "testing", "refactoring"],
+                "name": "Ampcode2 (BE Assistant)",
+                "role": "Backend Coding Assistant", 
+                "capabilities": ["backend_development", "api_design", "database_integration", "system_architecture"],
                 "status": "active",
                 "current_task": None,
                 "tasks_completed": 0,
-                "coordination_priority": 3
+                "coordination_priority": 2,
+                "project": "Chimera",
+                "reports_to": "chimera_lead"
             },
             "documentation_orchestrator": {
                 "pid": 89852,
-                "name": "DocOrchestrator",
-                "role": "Documentation & Project Coordination",
-                "capabilities": ["documentation", "project_coordination", "architectural_docs"],
+                "name": "Architecture DocAgent",
+                "role": "New Architecture Documentation & Orchestration",
+                "capabilities": ["architecture_documentation", "technical_specs", "coordination", "implementation_guides"],
                 "status": "active",
                 "current_task": None,
                 "tasks_completed": 0,
-                "coordination_priority": 2
+                "coordination_priority": 2,
+                "project": "Architecture Upgrade"
             },
-            "implementation_coder": {
+            "architecture_coder": {
                 "pid": 95867,
-                "name": "ImplCoder",
+                "name": "Architecture Coder",
                 "role": "Architecture Implementation Specialist",
-                "capabilities": ["architecture_implementation", "system_integration", "deployment"],
+                "capabilities": ["architecture_implementation", "system_integration", "deployment", "technical_architecture"],
                 "status": "active",
                 "current_task": None,
                 "tasks_completed": 0,
-                "coordination_priority": 2
+                "coordination_priority": 2,
+                "project": "Architecture Upgrade"
             }
         }
         
