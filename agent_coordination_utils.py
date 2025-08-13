@@ -29,7 +29,7 @@ class BaseAgent(ABC):
     
     def __init__(self, agent_id: str = None, agent_type: str = "generic", 
                  name: str = None, capabilities: List[str] = None,
-                 max_concurrent_tasks: int = 5, nats_url: str = "nats://localhost:4222",
+                 max_concurrent_tasks: int = 5, nats_url: str = "nats://localhost:4223",
                  environment: str = "dev"):
         
         self.agent_id = agent_id or f"agent_{uuid.uuid4().hex[:8]}"
