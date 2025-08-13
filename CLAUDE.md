@@ -2,279 +2,225 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Hero Core Command Centre - AI Agent Collaboration Framework
+# NATS Inter-Agent Communication System
 
-## Project Overview
+**Core Purpose**: Standardized communication layer for synchronizing agentic swarms with immediate memory sharing and coordination capabilities. Provides out-of-the-box infrastructure for multi-agent systems with task distribution, load balancing, and collective intelligence.
 
-The Hero Core Command Centre is a comprehensive terminal-based dashboard that provides real-time monitoring of AI systems, development tools, and system resources. It integrates with the Frontline/Chimera AI agent collaboration framework to create a unified command centre for managing multiple AI agents working together.
-
-## Architecture
-
-### Core Components
-
-1. **Hero Dashboard (Terminal UI)**
-   - Main optimized dashboard: `hero_core_optimized_fixed.sh`
-   - Launcher script: `launch_hero_optimized_fixed.sh`
-   - Setup script: `setup_optimized_fixed.sh`
-
-2. **Monitoring System**
-   - Python monitors in `monitors/` directory
-   - JSON cache system under `~/.hero_core/cache/`
-   - Real-time data collection and visualization
-
-3. **AI Agent Integration**
-   - LangSmith/LangChain tracing for observability
-   - NATS messaging for agent communication
-   - Multi-agent coordination and task delegation
-
-4. **Knowledge Systems**
-   - Graphiti temporal knowledge graphs
-   - Neo4j hypergraph integration
-   - ChromaDB for embeddings and search
-
-### Technology Stack
-
-- **Backend**: Python 3.8+ with asyncio
-- **Frontend**: Terminal-based with ANSI colors and real-time updates
-- **Messaging**: NATS JetStream for agent communication
-- **Observability**: LangSmith + LangGraph for workflow tracing
-- **Knowledge**: ChromaDB, Neo4j, Graphiti for knowledge management
-- **Platform**: Optimized for macOS (compatible with Linux)
-
-## Common Development Tasks
-
-### Setup and Installation
+## Quick Start - Get a Swarm Running
 
 ```bash
-# Initial setup (run once)
+# 1. Start NATS server (port 4224 for development)
+nats-server -c nats_dev.conf
+
+# 2. Run demo swarm (creates 4 agents, distributes 31 tasks)
+python3 demo_communication_system.py
+
+# 3. Monitor swarm activity (optional dashboard)
+./hero_optimized
+```
+
+## Common Development Commands
+
+### Running the Communication System
+```bash
+# Start full orchestrator with auto-scaling
+python3 run_communication_system.py --nats-url nats://localhost:4224
+
+# Run tests to verify system
+python3 test_communication_layer.py --nats-url nats://localhost:4224
+
+# Demo with custom agent count
+python3 demo_communication_system.py --agents 10
+
+# Check NATS connection
+python3 test_nats_connection.py
+```
+
+### Creating Custom Agents
+```bash
+# Register a new custom agent type
+python3 register_custom_agent.py --type "analyzer" --capabilities "nlp,sentiment"
+
+# Launch agent workers
+python3 agents/launch_agents.sh --type analyzer --count 5
+```
+
+### Dashboard Monitoring (Optional)
+```bash
+# Setup dashboard (one-time)
 ./setup_optimized_fixed.sh
 
-# Install dependencies
-pip install langsmith langchain langgraph psutil
-brew install jq  # For JSON processing optimization
-```
-
-### Running the Dashboard
-
-```bash
-# Launch optimized dashboard
+# Launch dashboard
 ./hero_optimized
 
-# Or directly
-./launch_hero_optimized_fixed.sh
-
-# Run individual monitors
-python3 monitors/claude_usage_monitor_optimized.py
+# Individual monitors
 python3 monitors/agents_monitor.py
-python3 monitors/langsmith_tracer.py
+python3 monitors/nats_monitor.py
 ```
 
-### Development Commands
-
+### Testing
 ```bash
-# Lint shell scripts
-shellcheck hero_core_optimized_fixed.sh launch_hero_optimized_fixed.sh
+# Unit tests for communication layer
+python3 test_communication_layer.py
 
-# Lint Python code
-flake8 monitors/*.py
+# Integration test with multiple agents
+python3 agents/test_agent_integration.py
 
-# Format Python code
-black monitors/*.py
-
-# Run tests (when implemented)
-pytest tests/
+# Load test with high task volume
+python3 test_communication_layer.py --load-test --tasks 1000
 ```
 
-### Agent Integration Commands
+## Architecture - Communication Layer
 
-```bash
-# Start Chimera agent framework (requires frontline setup)
-cd /Users/rudlord/q3/frontline
-make nats-up && make nats-bootstrap
-make run-langgraph
-
-# Monitor agent activities
-python3 monitors/agent_coordinator.py
-python3 monitors/chimera_bridge.py
-```
-
-## High-Level Architecture
-
-### Agent Collaboration Framework
+### Core System Components
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LangSmith Studio (Observability)         │
+│                    NATS JetStream (Port 4224)               │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Streams:                                              │  │
+│  │ • HERO_TASKS_DEV - Task queue (WorkQueue pattern)    │  │
+│  │ • HERO_EVENTS_DEV - Event bus (pub/sub)              │  │
+│  │ • HERO_SYNC_DEV - Synchronization barriers           │  │
+│  │ • HERO_COORDINATION_DEV - Agent registry & heartbeat │  │
+│  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-                              ↑
-                         LangGraph Tracing
-                              ↓
+                              ↕
 ┌─────────────────────────────────────────────────────────────┐
-│               Hero Command Centre Dashboard                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │  Agent       │  │  Performance │  │  Knowledge   │     │
-│  │  Monitor     │  │  Metrics     │  │  Graph       │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
+│         InterAgentCommunicationLayer (Orchestrator)         │
+│  • Task distribution with priority queuing                  │
+│  • Load balancing across agent capabilities                 │
+│  • Synchronization checkpoints for coordinated actions      │
+│  • Agent health monitoring & failure recovery               │
+│  • Shared memory through NATS KV store                      │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                              ↕
 ┌─────────────────────────────────────────────────────────────┐
-│                    NATS JetStream Bus                       │
-│ Streams: Tasks, Results, Events, Control | KV Store | OS    │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│  UI Agent   │ Embedder  │ Retriever │ Memory  │ Orchestrator│
+│                    Agent Swarm (BaseAgent)                  │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐        │
+│  │Agent1│  │Agent2│  │Agent3│  │Agent4│  │AgentN│  ...    │
+│  └──────┘  └──────┘  └──────┘  └──────┘  └──────┘        │
+│  Each agent:                                                │
+│  • Registers capabilities on startup                        │
+│  • Receives tasks based on capabilities & load              │
+│  • Reports heartbeat every 5 seconds                        │
+│  • Shares results to collective memory                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow Patterns
+### Communication Patterns
 
-1. **Agent Registration**: Agents register with coordinator through NATS
-2. **Task Distribution**: Coordinator assigns tasks based on agent capabilities
-3. **Execution Tracking**: LangSmith traces all agent interactions
-4. **Knowledge Sharing**: Agents share insights through knowledge graph
-5. **Performance Monitoring**: Real-time metrics in Hero dashboard
+1. **Agent Registration**: `agent.register()` → Updates registry with capabilities
+2. **Task Distribution**: Orchestrator assigns tasks based on agent capabilities and current load
+3. **Synchronization**: Agents reach checkpoints, wait for barrier completion
+4. **Memory Sharing**: Results published to NATS KV store, accessible by all agents
+5. **Health Monitoring**: Heartbeat system detects failures, triggers task reassignment
 
-### Key Integration Points
+### Key Files
 
-- **NATS Subjects**: `hero.v1.{env}.agents.{action}` for Hero-specific messages
-- **LangSmith Projects**: `hero-command-centre` for unified tracing
-- **Cache System**: JSON files in `~/.hero_core/cache/` for state persistence
-- **Knowledge APIs**: REST endpoints for cross-agent data sharing
+- `inter_agent_communication.py` - Core orchestration layer with task distribution, load balancing, synchronization
+- `agent_coordination_utils.py` - BaseAgent class, task handlers, heartbeat system
+- `run_communication_system.py` - System bootstrapper, auto-scaling, health monitoring
+- `demo_communication_system.py` - Working example of multi-agent task processing
+- `test_communication_layer.py` - Comprehensive test suite
 
-## File Structure and Conventions
+## Creating a Custom Agent
 
-### Core Scripts
-- `hero_core_optimized_fixed.sh` - Main dashboard with AI agent sections
-- `launch_hero_optimized_fixed.sh` - Launcher with environment setup
-- `setup_optimized_fixed.sh` - One-time setup and dependency checking
+```python
+from agent_coordination_utils import BaseAgent, TaskResult
 
-### Monitor Modules
-- `monitors/langsmith_tracer.py` - LangSmith integration and tracing
-- `monitors/agent_coordinator.py` - Multi-agent task coordination
-- `monitors/chimera_bridge.py` - Bridge to Chimera framework
-- `monitors/agents_monitor.py` - AI agent process monitoring
-- `monitors/*_monitor_optimized.py` - Optimized monitoring modules
+class CustomAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(
+            agent_type="custom_worker",
+            capabilities=["analysis", "processing"],
+            max_concurrent_tasks=5,
+            nats_url="nats://localhost:4224"
+        )
+    
+    async def default_task_handler(self, task_data):
+        # Process task based on type
+        result = await self.process(task_data)
+        
+        # Share to collective memory
+        await self.publish_to_memory("results", result)
+        
+        return TaskResult(success=True, data=result)
 
-### Configuration
-- Environment variables: `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`
-- Cache directory: `~/.hero_core/cache/`
-- Log files: `~/.hero_core/hero.log`
-- NATS configuration: Inherited from Chimera setup
+# Run agent
+agent = CustomAgent()
+asyncio.run(agent.run())
+```
 
-## Coding Conventions
+## Task Distribution Example
 
-### Bash Scripts
-- Use safe patterns: quote variables, prefer `$(...)` over backticks
-- Implement caching for expensive operations
-- Follow existing color and formatting patterns
-- Use functions for reusable code blocks
+```python
+from inter_agent_communication import InterAgentCommunicationLayer, TaskPriority
 
-### Python Modules
-- Follow PEP 8: 4-space indentation, meaningful names
-- Use type hints for function signatures
-- Implement proper error handling and logging
-- Use `@traceable` decorator for LangSmith integration
-- Keep modules single-responsibility
+# Initialize orchestrator
+comm_layer = InterAgentCommunicationLayer()
+await comm_layer.initialize()
 
-### JSON Data Formats
-- Use consistent timestamp formats (ISO 8601)
-- Include metadata for tracing (correlation_id, agent_name)
-- Implement atomic writes with temporary files
-- Validate JSON structure before writing
+# Create high-priority task
+task_id = await comm_layer.create_task(
+    task_type="analysis",
+    data={"content": "..."},
+    priority=TaskPriority.HIGH
+)
+
+# Task automatically distributed to capable agent with lowest load
+# Result available via: await comm_layer.get_task_result(task_id)
+```
+
+## Testing Patterns
+
+```python
+# Test agent coordination
+async def test_multi_agent_sync():
+    agents = [DemoAgent(i) for i in range(4)]
+    
+    # Start all agents
+    await asyncio.gather(*[a.initialize() for a in agents])
+    
+    # Create synchronization point
+    await comm_layer.create_sync_checkpoint("phase1", expected_agents=4)
+    
+    # All agents must reach checkpoint
+    results = await asyncio.gather(*[a.reach_checkpoint("phase1") for a in agents])
+    assert all(results)  # All agents synchronized
+```
 
 ## Performance Optimizations
 
-### Caching Strategy
-- Command output caching with TTL
-- JSON file-based cache for compatibility
-- Lazy refresh for expensive operations
-- Memory-efficient data structures
-
-### Agent Communication
-- Asynchronous NATS messaging
-- Correlation ID tracking
-- Circuit breaker patterns
-- Batch processing for bulk operations
-
-## Testing Guidelines
-
-### Manual Testing
-```bash
-# Smoke test - verify dashboard launches
-./launch_hero_optimized_fixed.sh
-
-# Monitor test - verify JSON output
-python3 monitors/agents_monitor.py
-cat ~/.hero_core/cache/agents_status.json
-
-# Agent integration test
-python3 monitors/chimera_bridge.py --test
-```
-
-### Automated Testing (Future)
-- Unit tests for monitor modules
-- Integration tests for agent communication
-- Performance benchmarks for dashboard rendering
-- End-to-end tests for complete workflows
-
-## Security Considerations
-
-### API Keys and Secrets
-- Store LangSmith API key in environment variables
-- Never commit secrets to repository
-- Use local config files ignored by git
-- Implement proper credential rotation
-
-### Agent Communication
-- Use TLS for NATS connections
-- Implement proper authentication
-- Validate all incoming messages
-- Rate limiting for agent requests
+- **Command caching**: Dashboard caches expensive operations (30s TTL)
+- **Batch processing**: Agents process multiple tasks in parallel
+- **Connection pooling**: Reuse NATS connections across agents
+- **Async operations**: All I/O is non-blocking
+- **Load balancing**: Tasks distributed based on agent capacity
 
 ## Troubleshooting
 
-### Common Issues
-- **Dashboard crash**: Check bash version compatibility (`bash --version`)
-- **Missing data**: Verify monitor scripts are executable
-- **Agent connection**: Check NATS server status
-- **Performance**: Enable command caching, install `jq`
-
-### Debug Commands
 ```bash
-# Check monitor outputs
-ls -la ~/.hero_core/cache/
+# Check NATS server status
+nats server info
 
-# Verify NATS connection
-nats stream ls
+# View task queue
+nats stream view HERO_TASKS_DEV
 
-# Check LangSmith traces
-export LANGSMITH_TRACING=true
-python3 monitors/langsmith_tracer.py --debug
+# Monitor agent heartbeats
+nats sub "hero.v1.dev.agents.heartbeat.>"
+
+# Check communication layer logs
+tail -f ~/.hero_core/communication.log
+
+# Verify agent registration
+cat ~/.hero_core/cache/communication_layer.json | jq .agents
 ```
 
-## Integration with Frontline/Chimera
+## Security & Production
 
-The Hero Dashboard integrates with the existing Frontline/Chimera codebase located at `/Users/rudlord/q3/frontline/`. Key integration points:
-
-- **NATS Messaging**: Uses existing NATS infrastructure
-- **LangGraph Workflows**: Extends existing workflow patterns
-- **Knowledge Systems**: Connects to ChromaDB and Neo4j
-- **Agent Framework**: Leverages existing agent architecture
-
-Ensure the Frontline environment is properly set up before running agent integration features.
-
-## Future Enhancements
-
-### Planned Features
-- Real-time 3D visualization of agent interactions
-- Machine learning for optimal task distribution
-- Plugin architecture for custom monitors
-- WebSocket interface for remote monitoring
-- Historical analytics and reporting
-
-### Extensibility
-- Monitor plugin system
-- Custom agent implementations
-- Configurable dashboard layouts
-- External API integrations
+- **NATS Auth**: Enable authentication in production (`nats.conf`)
+- **TLS**: Use `nats://tls://` URLs for encrypted communication
+- **Rate limiting**: Configure max tasks per agent
+- **API keys**: Store in environment variables, never in code
+- **Monitoring**: Use LangSmith for production observability
