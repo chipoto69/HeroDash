@@ -108,7 +108,7 @@ class SyncPoint:
 class InterAgentCommunicationLayer:
     """Advanced NATS-based communication layer for multi-agent coordination"""
     
-    def __init__(self, nats_url: str = "nats://localhost:4222", environment: str = "dev"):
+    def __init__(self, nats_url: str = "nats://localhost:4223", environment: str = "dev"):
         self.nats_url = nats_url
         self.environment = environment
         self.nc = None
