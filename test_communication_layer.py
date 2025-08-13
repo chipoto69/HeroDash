@@ -85,7 +85,7 @@ class TestAgent(BaseAgent):
 class CommunicationLayerTestSuite:
     """Comprehensive test suite for the communication layer"""
     
-    def __init__(self, nats_url: str = "nats://localhost:4222"):
+    def __init__(self, nats_url: str = "nats://localhost:4223"):
         self.nats_url = nats_url
         self.communication_layer = None
         self.test_agents: List[TestAgent] = []
