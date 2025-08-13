@@ -5,7 +5,7 @@ environment: "dev"
 
 # NATS Configuration
 nats:
-  url: "nats://localhost:4222"
+  url: "nats://localhost:4223"
   streams:
     tasks:
       retention: "WorkQueue"
