@@ -37,7 +37,7 @@ logger = logging.getLogger("CommunicationSystem")
 class CommunicationSystemOrchestrator:
     """Main orchestrator for the communication system"""
     
-    def __init__(self, config_file: Optional[str] = None, nats_url: str = "nats://localhost:4222"):
+    def __init__(self, config_file: Optional[str] = None, nats_url: str = "nats://localhost:4223"):
         self.nats_url = nats_url
         self.config = self._load_config(config_file)
         
