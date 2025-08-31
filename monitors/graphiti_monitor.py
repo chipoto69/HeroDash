@@ -23,7 +23,9 @@ class GraphitiMonitor:
     def __init__(self):
         self.neo4j_uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7687')
         self.neo4j_user = os.environ.get('NEO4J_USER', 'neo4j')
-        self.neo4j_password = os.environ.get('NEO4J_PASSWORD', 'password')
+        self.neo4j_password = os.environ.get('NEO4J_PASSWORD')
+        if not self.neo4j_password:
+            raise ValueError("NEO4J_PASSWORD environment variable must be set")
         self.driver = None
         self.stats_file = Path.home() / ".hero_dashboard" / "graphiti_stats.json"
         self.stats_file.parent.mkdir(exist_ok=True)

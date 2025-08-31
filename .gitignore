@@ -73,6 +73,21 @@ logs/
 # Uncomment if you don't want to track user data
 # ~/.hero_core/
 
+# Environment files and secrets
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.p12
+secrets/
+credentials/
+
+# User-specific paths and data
+~/.hero_core/
+~/.hero_dashboard/
+
 # Keep the archive but don't track new additions
 archive_old_versions/*
 !archive_old_versions/.gitkeep

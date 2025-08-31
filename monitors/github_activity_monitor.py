@@ -12,7 +12,11 @@ import urllib.request
 import urllib.error
 
 class GitHubActivityMonitor:
-    def __init__(self, username="rudlord"):
+    def __init__(self, username=None):
+        if username is None:
+            username = os.environ.get('GITHUB_USERNAME')
+            if not username:
+                raise ValueError("GITHUB_USERNAME environment variable must be set or username parameter provided")
         self.username = username
         self.cache_dir = Path.home() / ".hero_core" / "cache"
         self.cache_file = self.cache_dir / "github_activity.json"
@@ -173,7 +177,7 @@ class GitHubActivityMonitor:
         return data
 
 def main():
-    monitor = GitHubActivityMonitor("rudlord")
+    monitor = GitHubActivityMonitor()
     data = monitor.get_activity_data()
     
     print("GitHub Activity (21 days)")
