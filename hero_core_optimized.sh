@@ -34,9 +34,9 @@ REFRESH_RATE=3
 LAZY_REFRESH_COUNTER=0
 LAZY_REFRESH_INTERVAL=10  # Refresh token data every 10 cycles (30 seconds)
 
-# Project Paths
-CHIMERA_BASE="/Users/rudlord/q3/Frontline"
-GRAPHITI_BASE="/Users/rudlord/q3/0_MEMORY/graphiti"
+# Project Paths (configurable via environment variables)
+CHIMERA_BASE="${CHIMERA_BASE:-/Users/rudlord/q3/Frontline}"
+GRAPHITI_BASE="${GRAPHITI_BASE:-/Users/rudlord/q3/0_MEMORY/graphiti}"
 
 # Cache for system commands
 declare -A CMD_CACHE
@@ -111,13 +111,14 @@ log_event() {
 # Update lazy-refresh data (Claude usage, GitHub activity)
 update_lazy_data() {
     # Update Claude usage data
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py > /dev/null 2>&1 &
+    HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor.py" ]; then
+        python3 "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor.py" > /dev/null 2>&1 &
     fi
     
     # Update GitHub activity data
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" ]; then
-        python3 /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor.py" ]; then
+        python3 "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor.py" > /dev/null 2>&1 &
     fi
 }
 

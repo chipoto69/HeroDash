@@ -5,19 +5,20 @@
 echo "Setting up optimized Hero Core Dashboard..."
 
 # Make all scripts executable
-chmod +x /Users/rudlord/Hero_dashboard/hero_core_optimized_fixed.sh
-chmod +x /Users/rudlord/Hero_dashboard/launch_hero_optimized_fixed.sh
-chmod +x /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor_optimized.py
-chmod +x /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor_optimized.py
-chmod +x /Users/rudlord/Hero_dashboard/monitors/agents_monitor.py
-chmod +x /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py
-chmod +x /Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py
+HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
+chmod +x "$HERO_DASHBOARD_DIR/hero_core_optimized_fixed.sh"
+chmod +x "$HERO_DASHBOARD_DIR/launch_hero_optimized_fixed.sh"
+chmod +x "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor_optimized.py"
+chmod +x "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor_optimized.py"
+chmod +x "$HERO_DASHBOARD_DIR/monitors/agents_monitor.py"
+chmod +x "$HERO_DASHBOARD_DIR/monitors/code_activity_monitor.py"
+chmod +x "$HERO_DASHBOARD_DIR/monitors/token_usage_analyzer.py"
 
 echo "✓ Made all scripts executable"
 
 # Create symlink for hero command to use optimized version
-if [ ! -f "/Users/rudlord/Hero_dashboard/hero_optimized" ]; then
-    ln -s /Users/rudlord/Hero_dashboard/launch_hero_optimized_fixed.sh /Users/rudlord/Hero_dashboard/hero_optimized
+if [ ! -f "$HERO_DASHBOARD_DIR/hero_optimized" ]; then
+    ln -s "$HERO_DASHBOARD_DIR/launch_hero_optimized_fixed.sh" "$HERO_DASHBOARD_DIR/hero_optimized"
     echo "✓ Created hero_optimized symlink"
 fi
 
@@ -29,7 +30,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" <<EOF
 {
   "projects": [
-    "/Users/rudlord/Hero_dashboard"
+    "$HERO_DASHBOARD_DIR"
   ]
 }
 EOF

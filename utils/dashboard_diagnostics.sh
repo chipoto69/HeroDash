@@ -49,15 +49,18 @@ echo ""
 
 # Check Directories
 echo -e "${CYAN}PROJECT PATHS:${NC}"
-[ -d "/Users/rudlord/q3/Frontline" ] && echo -e "  ${GREEN}✓${NC} Frontline project" || echo -e "  ${RED}✗${NC} Frontline not found"
-[ -d "/Users/rudlord/q3/0_MEMORY/graphiti" ] && echo -e "  ${GREEN}✓${NC} Graphiti project" || echo -e "  ${RED}✗${NC} Graphiti not found"
+FRONTLINE_PATH="${CHIMERA_BASE:-/Users/rudlord/q3/Frontline}"
+GRAPHITI_PATH="${GRAPHITI_BASE:-/Users/rudlord/q3/0_MEMORY/graphiti}"
+[ -d "$FRONTLINE_PATH" ] && echo -e "  ${GREEN}✓${NC} Frontline project" || echo -e "  ${RED}✗${NC} Frontline not found"
+[ -d "$GRAPHITI_PATH" ] && echo -e "  ${GREEN}✓${NC} Graphiti project" || echo -e "  ${RED}✗${NC} Graphiti not found"
 
 echo ""
 
 # Check Dashboard Files
 echo -e "${CYAN}DASHBOARD FILES:${NC}"
+HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
 for file in nexus_dashboard.sh nexus_launcher.sh hero_dashboard_smooth.sh hero_dashboard_graphiti.sh dashboard_control.sh; do
-    if [ -f "/Users/rudlord/Hero_dashboard/$file" ]; then
+    if [ -f "$HERO_DASHBOARD_DIR/$file" ]; then
         echo -e "  ${GREEN}✓${NC} $file"
     else
         echo -e "  ${RED}✗${NC} $file missing"

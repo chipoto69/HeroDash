@@ -71,7 +71,9 @@ class ChimeraAgent:
 class ChimeraBridge:
     """Bridge between Hero Dashboard and Chimera framework"""
     
-    def __init__(self, chimera_base: str = "/Users/rudlord/q3/frontline"):
+    def __init__(self, chimera_base: str = None):
+        if chimera_base is None:
+            chimera_base = os.environ.get('CHIMERA_BASE', '/Users/rudlord/q3/frontline')
         self.chimera_base = Path(chimera_base)
         self.cache_dir = Path.home() / ".hero_core" / "cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)

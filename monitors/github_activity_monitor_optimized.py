@@ -14,8 +14,8 @@ import urllib.error
 import time
 
 class GitHubActivityMonitor:
-    def __init__(self, username="rudlord"):
-        self.username = username
+    def __init__(self, username=None):
+        self.username = username or os.environ.get('GITHUB_USERNAME', 'rudlord')
         self.cache_dir = Path.home() / ".hero_core" / "cache"
         self.cache_file = self.cache_dir / "github_activity.json"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -187,7 +187,7 @@ class GitHubActivityMonitor:
         return data
 
 def main():
-    monitor = GitHubActivityMonitor("rudlord")
+    monitor = GitHubActivityMonitor()
     data = monitor.get_activity_data()
     
     # Output only JSON for the dashboard to parse

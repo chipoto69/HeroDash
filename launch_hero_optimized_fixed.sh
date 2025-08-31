@@ -3,6 +3,13 @@
 # HERO CORE LAUNCHER
 # Ensures clean start with no conflicts
 
+# Source environment variables if .env file exists
+if [ -f "$(dirname "$0")/.env" ]; then
+    set -a  # automatically export all variables
+    source "$(dirname "$0")/.env"
+    set +a
+fi
+
 CYAN='\033[38;2;93;173;226m'
 GREEN='\033[38;2;46;204;113m'
 YELLOW='\033[38;2;241;196;15m'
@@ -75,4 +82,5 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') | Launcher exec core" >> "$LAUNCH_LOG"
 sleep 1
 
 # Launch Hero Core
-exec /Users/rudlord/Hero_dashboard/hero_core_optimized_fixed.sh
+HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
+exec "$HERO_DASHBOARD_DIR/hero_core_optimized_fixed.sh"

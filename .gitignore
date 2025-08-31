@@ -69,6 +69,11 @@ logs/
 *.swo
 *~
 
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+
 # Hero Core runtime data (user-specific)
 # Uncomment if you don't want to track user data
 # ~/.hero_core/

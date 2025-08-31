@@ -15,8 +15,8 @@ WHITE='\033[38;5;255m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-# Dashboard directory
-DASHBOARD_DIR="/Users/rudlord/Hero_dashboard"
+# Dashboard directory (configurable via environment variable)
+DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
 
 # Function to stop all dashboards
 stop_all() {

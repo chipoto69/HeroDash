@@ -41,9 +41,9 @@ REFRESH_RATE=3
 LAZY_REFRESH_COUNTER=0
 LAZY_REFRESH_INTERVAL=10  # Refresh token data every 10 cycles (30 seconds)
 
-# Project Paths
-CHIMERA_BASE="/Users/rudlord/q3/Frontline"
-GRAPHITI_BASE="/Users/rudlord/q3/0_MEMORY/graphiti"
+# Project Paths (configurable via environment variables)
+CHIMERA_BASE="${CHIMERA_BASE:-/Users/rudlord/q3/Frontline}"
+GRAPHITI_BASE="${GRAPHITI_BASE:-/Users/rudlord/q3/0_MEMORY/graphiti}"
 
 # Cache for system commands (using regular arrays as fallback for older bash)
 CMD_CACHE=()
@@ -176,54 +176,55 @@ log_event() {
 # Update lazy-refresh data (Claude usage, GitHub activity)
 update_lazy_data() {
     # Update Claude usage data
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/claude_usage_monitor.py > /dev/null 2>&1 &
+    HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/claude_usage_monitor.py" > /dev/null 2>&1 &
         fi
     fi
     # Analyze token trends
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/token_usage_analyzer.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/token_usage_analyzer.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/token_usage_analyzer.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/token_usage_analyzer.py" > /dev/null 2>&1 &
         fi
     fi
     
     # Update GitHub activity data
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/github_activity_monitor.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/github_activity_monitor.py" > /dev/null 2>&1 &
         fi
     fi
     # Update agents and code activity
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/agents_monitor.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/agents_monitor.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/agents_monitor.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/agents_monitor.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/agents_monitor.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/agents_monitor.py" > /dev/null 2>&1 &
         fi
     fi
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/code_activity_monitor.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/code_activity_monitor.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/code_activity_monitor.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/code_activity_monitor.py" > /dev/null 2>&1 &
         fi
     fi
     
     # Update LangSmith tracing stats
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/langsmith_tracer.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/langsmith_tracer.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/langsmith_tracer.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/langsmith_tracer.py" > /dev/null 2>&1 &
         fi
     fi
     
     # Update agent coordination status
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/agent_coordinator.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/agent_coordinator.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/agent_coordinator.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/agent_coordinator.py" > /dev/null 2>&1 &
         fi
     fi
     
     # Update Chimera bridge status
-    if [ -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" ]; then
-        if ! pgrep -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" >/dev/null 2>&1; then
-            python3 /Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py > /dev/null 2>&1 &
+    if [ -f "$HERO_DASHBOARD_DIR/monitors/chimera_bridge.py" ]; then
+        if ! pgrep -f "$HERO_DASHBOARD_DIR/monitors/chimera_bridge.py" >/dev/null 2>&1; then
+            python3 "$HERO_DASHBOARD_DIR/monitors/chimera_bridge.py" > /dev/null 2>&1 &
         fi
     fi
 }
@@ -717,8 +718,8 @@ main() {
                     ;;
                 g|G)
                     echo -e "\n${YELLOW}Opening Graphiti details...${NC}"
-                    if [ -f "/Users/rudlord/Hero_dashboard/monitors/graphiti_monitor.py" ]; then
-                        python3 /Users/rudlord/Hero_dashboard/monitors/graphiti_monitor.py
+                    if [ -f "$HERO_DASHBOARD_DIR/monitors/graphiti_monitor.py" ]; then
+                        python3 "$HERO_DASHBOARD_DIR/monitors/graphiti_monitor.py"
                         echo -e "${GRAY}Press any key to continue...${NC}"
                         read -n 1
                     fi
@@ -764,8 +765,8 @@ main() {
                 s|S)
                     # Sync with Chimera
                     echo -e "\n${YELLOW}Syncing with Chimera framework...${NC}"
-                    if [ -f "/Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py" ]; then
-                        python3 /Users/rudlord/Hero_dashboard/monitors/chimera_bridge.py --sync
+                    if [ -f "$HERO_DASHBOARD_DIR/monitors/chimera_bridge.py" ]; then
+                        python3 "$HERO_DASHBOARD_DIR/monitors/chimera_bridge.py" --sync
                     fi
                     sleep 2
                     initial_display

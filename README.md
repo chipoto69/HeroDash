@@ -85,13 +85,20 @@ git clone https://github.com/yourusername/HeroDash.git
 cd HeroDash
 ```
 
-2. Make scripts executable:
+2. Configure environment (optional):
+```bash
+# Use the configuration helper
+./configure_environment.sh
+# Then edit .env with your specific paths and credentials
+```
+
+3. Make scripts executable:
 ```bash
 chmod +x hero launch_hero.sh hero_core.sh
 chmod +x monitors/*.py utils/*.sh
 ```
 
-3. Launch the dashboard:
+4. Launch the dashboard:
 ```bash
 ./hero
 ```

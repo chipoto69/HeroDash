@@ -30,9 +30,9 @@ HERO_CACHE="$HERO_HOME/cache"
 GRAPHITI_STATS="$HERO_CACHE/graphiti_stats.json"
 REFRESH_RATE=3
 
-# Project Paths
-CHIMERA_BASE="/Users/rudlord/q3/Frontline"
-GRAPHITI_BASE="/Users/rudlord/q3/0_MEMORY/graphiti"
+# Project Paths (configurable via environment variables)
+CHIMERA_BASE="${CHIMERA_BASE:-/Users/rudlord/q3/Frontline}"
+GRAPHITI_BASE="${GRAPHITI_BASE:-/Users/rudlord/q3/0_MEMORY/graphiti}"
 
 # Terminal control
 clear_to_eol() { echo -ne "\033[K"; }
@@ -106,8 +106,9 @@ get_graphiti_stats() {
     
     # Try to update stats
     if pgrep -f "neo4j" > /dev/null 2>&1; then
-        if [ -f "/Users/rudlord/Hero_dashboard/graphiti_monitor.py" ]; then
-            python3 /Users/rudlord/Hero_dashboard/graphiti_monitor.py > /dev/null 2>&1 &
+        HERO_DASHBOARD_DIR="${HERO_DASHBOARD_DIR:-/Users/rudlord/Hero_dashboard}"
+        if [ -f "$HERO_DASHBOARD_DIR/graphiti_monitor.py" ]; then
+            python3 "$HERO_DASHBOARD_DIR/graphiti_monitor.py" > /dev/null 2>&1 &
             sleep 1
             [ -f "$GRAPHITI_STATS" ] && cat "$GRAPHITI_STATS" 2>/dev/null
         fi
