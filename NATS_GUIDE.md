@@ -1,8 +1,12 @@
 # 🚀 NATS Integration Guide - Hero Command Centre
 
+> Legacy guide. The rebooted Hero dashboard does not treat NATS as the canonical operator truth.
+> Current operator truth is Hermes + Telegram + GBrain + WORKFLOWS + Alerts.
+> Keep this file only as migration/reference material for old subsystems.
+
 ## Overview
 
-NATS (Neural Autonomic Transport System) serves as the messaging backbone for your Hero agent ecosystem. Here's how to control it and use it for project synchronization.
+This file documents the older NATS-centric architecture, not the reboot contract.
 
 ## 🔧 NATS Connection Architecture
 

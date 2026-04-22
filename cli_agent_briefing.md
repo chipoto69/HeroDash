@@ -1,5 +1,8 @@
 # CLI Command Centre Agent Briefing (PID 49864)
 
+> Legacy briefing. This file reflects the old Chimera/agent-runtime/analytics worldview and should not be used as the current Hero reboot spec.
+> For the reboot path, use `README.md`, `web_dashboard.py`, `launch_web_dashboard.sh`, and the docs under `docs/`.
+
 ## Mission: Create Beautiful CLI Command Centre Interface
 
 ### Current System Status

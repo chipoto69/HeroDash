@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # NATS Inter-Agent Communication System
 
-**Core Purpose**: Standardized communication layer for synchronizing agentic swarms with immediate memory sharing and coordination capabilities. Provides out-of-the-box infrastructure for multi-agent systems with task distribution, load balancing, and collective intelligence.
+> Legacy system note. This file describes the old NATS-centric stack and is not the rebooted Hero dashboard contract.
+> The reboot branch treats Hermes, Telegram, GBrain, WORKFLOWS, and Alerts as the primary operator surfaces.
+
+**Core Purpose**: Historical documentation for the older standardized NATS communication layer.
 
 ## Quick Start - Get a Swarm Running
 

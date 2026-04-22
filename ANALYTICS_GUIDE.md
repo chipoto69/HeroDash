@@ -1,8 +1,12 @@
 # 🚀 Hero Command Centre Analytics Dashboard Guide
 
+> Legacy guide. This document describes the pre-reboot analytics/NATS-heavy dashboard story.
+> On `hero-reboot-phase0`, the canonical operator surface is the honest five-card web dashboard documented in `README.md` and launched via `./launch_web_dashboard.sh start`.
+> Treat everything below as historical context unless it is explicitly mirrored in the reboot files.
+
 ## Overview
 
-Your Hero Command Centre now has comprehensive analytics and monitoring capabilities! Here's everything you need to know about viewing your agent data and analytics.
+This file is kept for archaeology, not as the current product contract.
 
 ## 📊 Available Interfaces
 
