@@ -304,12 +304,20 @@ class DashboardRuntime:
             profile for profile in important_profiles if (HERMES_HOME / "profiles" / profile / "config.yaml").exists()
         ]
 
-        if gateway_lines or webapi_up:
+        if gateway_lines and webapi_up and workspace_up:
             status = "healthy"
             last_error = None
-        elif process_lines or available_profiles:
+        elif gateway_lines or webapi_up or workspace_up or process_lines or available_profiles:
             status = "degraded"
-            last_error = "Hermes configs exist but gateway/webapi health is partial"
+            missing_surfaces = []
+            if not gateway_lines:
+                missing_surfaces.append("gateway process")
+            if not webapi_up:
+                missing_surfaces.append("webapi port")
+            if not workspace_up:
+                missing_surfaces.append("workspace port")
+            missing_text = ", ".join(missing_surfaces) if missing_surfaces else "runtime surfaces"
+            last_error = f"Hermes health is partial: missing {missing_text}"
         else:
             status = "down"
             last_error = "No Hermes runtime or profile evidence found"
@@ -395,11 +403,16 @@ class DashboardRuntime:
             except Exception as exc:  # pragma: no cover - defensive
                 last_error = f"GBrain probe failed: {exc}"
 
-        if endpoint_reachable and repo_exists:
+        endpoint_ok = endpoint_reachable and (http_status is None or 200 <= http_status < 500)
+
+        if endpoint_ok and repo_exists:
             status = "healthy"
         elif url or repo_exists:
             status = "degraded"
-            last_error = last_error or "GBrain configured only partially"
+            if http_status and http_status >= 500:
+                last_error = last_error or f"GBrain endpoint returned HTTP {http_status}"
+            else:
+                last_error = last_error or "GBrain configured only partially"
         else:
             status = "down"
             last_error = last_error or "No GBrain configuration or repo found"

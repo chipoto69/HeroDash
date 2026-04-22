@@ -1,11 +1,13 @@
+from io import BytesIO
 from pathlib import Path
 import sys
+from urllib.error import HTTPError
 
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from web_dashboard import app, build_alerts, env_int, env_path, make_probe, parse_topic_ownership, sanitize_url
+from web_dashboard import DashboardRuntime, app, build_alerts, env_int, env_path, make_probe, parse_topic_ownership, sanitize_url
 
 
 def test_parse_topic_ownership_extracts_thread_ids():
@@ -83,3 +85,34 @@ def test_healthz_reports_dashboard_alive_even_if_dependencies_degraded(monkeypat
     assert health.json()["status"] == "ok"
     assert ready.status_code == 503
     assert ready.json()["status"] == "degraded"
+
+
+def test_probe_hermes_requires_gateway_and_ports_for_healthy(monkeypatch):
+    runtime = DashboardRuntime()
+    monkeypatch.setattr("web_dashboard.run_pgrep", lambda pattern: ["123 hermes gateway run --replace"])
+
+    def fake_port_open(port, host="127.0.0.1", timeout=0.35):
+        return False
+
+    monkeypatch.setattr("web_dashboard.port_open", fake_port_open)
+    probe = runtime.probe_hermes()
+
+    assert probe["status"] == "degraded"
+    assert "webapi port" in probe["last_error"]
+    assert "workspace port" in probe["last_error"]
+
+
+def test_probe_gbrain_marks_http_500_as_degraded(monkeypatch):
+    runtime = DashboardRuntime()
+    monkeypatch.setattr("web_dashboard.try_load_yaml", lambda path: {"mcp_servers": {"gbrain": {"url": "https://example.com/mcp", "headers": {}}}})
+    monkeypatch.setattr("web_dashboard.BRAIN_ROOT", Path.home())
+
+    def fake_urlopen(request, timeout=4):
+        raise HTTPError(request.full_url, 500, "boom", hdrs=None, fp=BytesIO(b"fail"))
+
+    monkeypatch.setattr("web_dashboard.urlopen", fake_urlopen)
+    probe = runtime.probe_gbrain()
+
+    assert probe["status"] == "degraded"
+    assert probe["details"]["http_status"] == 500
+    assert "HTTP 500" in probe["last_error"]
