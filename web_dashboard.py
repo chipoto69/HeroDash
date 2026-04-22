@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import socket
 import subprocess
@@ -34,13 +35,40 @@ TEMPLATES_DIR = ROOT / "web_templates"
 HERO_HOME = Path.home() / ".hero_core"
 HERO_CACHE = HERO_HOME / "cache"
 HERMES_HOME = Path.home() / ".hermes"
-WORKFLOWS_ROOT = Path("/Users/rudlord/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS")
-BRAIN_ROOT = Path("/Users/rudlord/brain")
-WIKI_GROK_SYSTEM = Path("/Users/rudlord/wiki/queries/grok420system.md")
-MAIN_HERMES_CONFIG = HERMES_HOME / "config.yaml"
-PORT_WEBAPI = 8642
-PORT_WORKSPACE = 3011
+
+
+def env_path(name: str, default: Path | str) -> Path:
+    raw = os.getenv(name)
+    if raw:
+        return Path(raw).expanduser()
+    return Path(default).expanduser()
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r; falling back to %s", name, raw, default)
+        return default
+
+
+WORKFLOWS_ROOT = env_path("HERO_WORKFLOWS_ROOT", Path.home() / "ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS")
+BRAIN_ROOT = env_path("HERO_BRAIN_ROOT", Path.home() / "brain")
+WIKI_GROK_SYSTEM = env_path("HERO_TELEGRAM_CANON", Path.home() / "wiki/queries/grok420system.md")
+MAIN_HERMES_CONFIG = env_path("HERO_HERMES_CONFIG", HERMES_HOME / "config.yaml")
+PORT_WEBAPI = env_int("HERO_WEBAPI_PORT", 8642)
+PORT_WORKSPACE = env_int("HERO_WORKSPACE_PORT", 3011)
 CARD_ORDER = ["hermes", "telegram", "gbrain", "workflows", "alerts"]
+FRESHNESS_THRESHOLDS = {
+    "hermes": 60,
+    "telegram": 60 * 60 * 24 * 7,
+    "gbrain": 60 * 60 * 24,
+    "workflows": 60 * 60 * 24 * 14,
+    "alerts": 60,
+}
 
 
 def utc_now() -> datetime:
@@ -205,13 +233,20 @@ def make_probe(
     timestamp: str | None = None,
     last_error: str | None = None,
 ) -> dict[str, Any]:
-    ts = timestamp or iso_now()
+    evidence_timestamp = details.get("evidence_timestamp") if isinstance(details, dict) else None
+    ts = evidence_timestamp or timestamp or iso_now()
+    freshness = age_in_seconds(ts)
+    threshold = FRESHNESS_THRESHOLDS.get(name)
+    effective_status = status
+    if status == "healthy" and threshold is not None and freshness is not None and freshness > threshold:
+        effective_status = "stale"
+        last_error = last_error or f"{name} evidence is older than {threshold}s"
     return {
         "name": name,
-        "status": status,
+        "status": effective_status,
         "source": source,
         "timestamp": ts,
-        "freshness_seconds": age_in_seconds(ts),
+        "freshness_seconds": freshness,
         "last_error": last_error,
         "details": details,
     }

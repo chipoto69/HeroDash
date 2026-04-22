@@ -10,6 +10,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CACHE_DIR="$HOME/.hero_core/cache"
 LOG_DIR="$HOME/.hero_core/logs"
 PID_DIR="$HOME/.hero_core/pids"
+HERO_WORKFLOWS_ROOT="${HERO_WORKFLOWS_ROOT:-$HOME/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS}"
+HERO_BRAIN_ROOT="${HERO_BRAIN_ROOT:-$HOME/brain}"
+HERO_HERMES_CONFIG="${HERO_HERMES_CONFIG:-$HOME/.hermes/config.yaml}"
+HERO_TELEGRAM_CANON="${HERO_TELEGRAM_CANON:-$HOME/wiki/queries/grok420system.md}"
 
 # Colors
 RED='\033[0;31m'
@@ -87,9 +91,9 @@ create_directories() {
 check_agent_status() {
     log "Checking reboot inputs..."
 
-    local hermes_config="$HOME/.hermes/config.yaml"
-    local workflows_root="/Users/rudlord/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS"
-    local brain_root="/Users/rudlord/brain"
+    local hermes_config="$HERO_HERMES_CONFIG"
+    local workflows_root="$HERO_WORKFLOWS_ROOT"
+    local brain_root="$HERO_BRAIN_ROOT"
 
     if [[ -f "$hermes_config" ]]; then
         info "✅ Hermes config present"
@@ -128,6 +132,7 @@ start_web_dashboard() {
     
     # Set environment variables
     export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
+    export HERO_WORKFLOWS_ROOT HERO_BRAIN_ROOT HERO_HERMES_CONFIG HERO_TELEGRAM_CANON
     
     # Check if port 8080 is available
     if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then

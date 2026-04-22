@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from web_dashboard import app, build_alerts, make_probe, parse_topic_ownership, sanitize_url
+from web_dashboard import app, build_alerts, env_int, env_path, make_probe, parse_topic_ownership, sanitize_url
 
 
 def test_parse_topic_ownership_extracts_thread_ids():
@@ -36,6 +36,27 @@ def test_build_alerts_escalates_worst_status():
     assert alerts["status"] == "down"
     assert alerts["details"]["count"] == 2
     assert any(item["card"] == "gbrain" for item in alerts["details"]["items"])
+
+
+def test_make_probe_marks_stale_when_evidence_too_old():
+    stale = make_probe(
+        name="gbrain",
+        status="healthy",
+        source="x",
+        details={"evidence_timestamp": "2026-01-01T00:00:00Z"},
+    )
+    assert stale["status"] == "stale"
+    assert stale["last_error"]
+
+
+def test_env_path_expands_tilde():
+    expanded = env_path("DOES_NOT_EXIST_TEST", "~/tmp-hero-test")
+    assert str(expanded).startswith(str(Path.home()))
+
+
+def test_env_int_falls_back_on_invalid_value(monkeypatch):
+    monkeypatch.setenv("HERO_TEST_PORT", "nope")
+    assert env_int("HERO_TEST_PORT", 1234) == 1234
 
 
 def test_healthz_reports_dashboard_alive_even_if_dependencies_degraded(monkeypatch):
