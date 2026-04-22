@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hero Reboot Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0d12;
+      --panel: #121822;
+      --panel-alt: #171f2b;
+      --border: #283243;
+      --text: #e8edf5;
+      --muted: #93a0b5;
+      --healthy: #15c98c;
+      --degraded: #f0a43a;
+      --down: #f05d6c;
+      --stale: #7f8ca3;
+      --accent: #68b7ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #091019 0%, #0a0d12 100%);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+    .wrap {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 20px 44px;
+    }
+    .header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: 0.01em;
+    }
+    .title p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.5;
+    }
+    .meta {
+      text-align: right;
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+      min-height: 220px;
+    }
+    .card.alerts { grid-column: 1 / -1; min-height: 0; }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+    }
+    .status {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--mono);
+    }
+    .status-healthy { background: rgba(21,201,140,.15); color: var(--healthy); }
+    .status-degraded { background: rgba(240,164,58,.14); color: var(--degraded); }
+    .status-down { background: rgba(240,93,108,.14); color: var(--down); }
+    .status-stale { background: rgba(127,140,163,.14); color: var(--stale); }
+    dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 10px 12px;
+      font-size: 0.93rem;
+    }
+    dt {
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    dd {
+      margin: 0;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .detail-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+    }
+    .detail-list li { margin-bottom: 6px; }
+    .error {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      color: #ffc3cb;
+      font-size: 0.92rem;
+    }
+    .foot {
+      margin-top: 18px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.86rem;
+    }
+    .alert-items {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .alert-item {
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .alert-item strong {
+      display: inline-block;
+      margin-right: 10px;
+      text-transform: capitalize;
+    }
+    code {
+      font-family: var(--mono);
+      color: var(--accent);
+    }
+    @media (max-width: 820px) {
+      .header { flex-direction: column; align-items: flex-start; }
+      .meta { text-align: left; }
+      dl { grid-template-columns: 86px 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>Hero Reboot Dashboard</h1>
+        <p>
+          No fake swarm theater. Just the current stack: Hermes runtime, Telegram operator lanes,
+          GBrain memory health, WORKFLOWS activity, and the alerts that actually matter.
+        </p>
+      </div>
+      <div class="meta">
+        <div>Mode: <span id="meta-mode"></span></div>
+        <div>Version: <span id="meta-version"></span></div>
+        <div>Updated: <span id="meta-updated"></span></div>
+      </div>
+    </div>
+
+    <div id="cards" class="cards"></div>
+    <div class="foot">Polling <code>/api/status</code> every 10s. Freshness is the age of the adapter result, not marketing copy.</div>
+  </div>
+
+  <script>
+    const initialData = {{ initial_data | tojson }};
+    const cardOrder = ["hermes", "telegram", "gbrain", "workflows", "alerts"];
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderList(items) {
+      if (!Array.isArray(items) || items.length === 0) return "—";
+      return `<ul class="detail-list">${items.map((item) => `<li>${escapeHtml(typeof item === 'string' ? item : JSON.stringify(item))}</li>`).join("")}</ul>`;
+    }
+
+    function renderValue(value) {
+      if (value === null || value === undefined || value === "") return "—";
+      if (Array.isArray(value)) return renderList(value);
+      if (typeof value === "object") return `<code>${escapeHtml(JSON.stringify(value))}</code>`;
+      return escapeHtml(value);
+    }
+
+    function summarizeCard(name, card) {
+      const details = card.details || {};
+      if (name === 'hermes') {
+        return {
+          source: card.source,
+          status: `${details.gateway_processes || 0} gateway / ${details.webapi_processes || 0} webapi`,
+          detailA: `webapi:${details.webapi_port_up ? 'up' : 'down'} workspace:${details.workspace_ui_port_up ? 'up' : 'down'}`,
+          detailB: details.tracked_profiles || []
+        };
+      }
+      if (name === 'telegram') {
+        const profiles = (details.profiles || []).map((p) => `${p.profile}:${p.home_thread_id || '?'}`);
+        const topics = (details.topics || []).map((t) => t.thread_id ? `${t.name}#${t.thread_id}` : t.name);
+        return {
+          source: card.source,
+          status: details.gateway_running ? 'gateway running' : 'gateway missing',
+          detailA: profiles,
+          detailB: topics
+        };
+      }
+      if (name === 'gbrain') {
+        return {
+          source: card.source,
+          status: details.endpoint_reachable ? `endpoint reachable (${details.http_status ?? 'ok'})` : 'endpoint unreachable',
+          detailA: details.endpoint,
+          detailB: [details.brain_branch, details.brain_recent_commit].filter(Boolean)
+        };
+      }
+      if (name === 'workflows') {
+        const lanes = (details.lanes || []).map((lane) => `${lane.name}:${lane.files}`);
+        return {
+          source: card.source,
+          status: details.branch || 'unknown branch',
+          detailA: details.recent_commit || 'no recent commit',
+          detailB: lanes
+        };
+      }
+      return {
+        source: card.source,
+        status: details.summary || 'all clear',
+        detailA: '',
+        detailB: details.items || []
+      };
+    }
+
+    function renderCards(payload) {
+      document.getElementById('meta-mode').textContent = payload.overview.mode || 'unknown';
+      document.getElementById('meta-version').textContent = payload.overview.version || 'unknown';
+      document.getElementById('meta-updated').textContent = payload.overview.timestamp || 'unknown';
+
+      const cardsEl = document.getElementById('cards');
+      cardsEl.innerHTML = cardOrder.map((name) => {
+        const card = payload.cards[name];
+        const summary = summarizeCard(name, card);
+        if (name === 'alerts') {
+          const items = (card.details.items || []).length
+            ? `<div class="alert-items">${card.details.items.map((item) => `<div class="alert-item"><strong>${escapeHtml(item.card)}</strong><span class="status status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span><div>${escapeHtml(item.message)}</div></div>`).join('')}</div>`
+            : '<div class="alert-item">No active alerts.</div>';
+          return `
+            <section class="card alerts">
+              <div class="card-head">
+                <h2>Alerts</h2>
+                <span class="status status-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
+              </div>
+              <dl>
+                <dt>Source</dt><dd>${renderValue(summary.source)}</dd>
+                <dt>Summary</dt><dd>${renderValue(summary.status)}</dd>
+                <dt>Freshness</dt><dd>${renderValue(card.freshness_seconds)}s</dd>
+                <dt>Updated</dt><dd>${renderValue(card.timestamp)}</dd>
+              </dl>
+              ${items}
+              ${card.last_error ? `<div class="error">${escapeHtml(card.last_error)}</div>` : ''}
+            </section>`;
+        }
+
+        return `
+          <section class="card ${escapeHtml(name)}">
+            <div class="card-head">
+              <h2>${escapeHtml(name)}</h2>
+              <span class="status status-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
+            </div>
+            <dl>
+              <dt>Source</dt><dd>${renderValue(summary.source)}</dd>
+              <dt>Status</dt><dd>${renderValue(summary.status)}</dd>
+              <dt>Detail A</dt><dd>${renderValue(summary.detailA)}</dd>
+              <dt>Detail B</dt><dd>${renderValue(summary.detailB)}</dd>
+              <dt>Freshness</dt><dd>${renderValue(card.freshness_seconds)}s</dd>
+              <dt>Updated</dt><dd>${renderValue(card.timestamp)}</dd>
+            </dl>
+            ${card.last_error ? `<div class="error">${escapeHtml(card.last_error)}</div>` : ''}
+          </section>`;
+      }).join('');
+    }
+
+    async function refresh() {
+      try {
+        const response = await fetch('/api/status', { cache: 'no-store' });
+        const data = await response.json();
+        renderCards(data);
+      } catch (error) {
+        console.error('Dashboard refresh failed', error);
+      }
+    }
+
+    renderCards(initialData);
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

@@ -38,7 +38,7 @@ header() {
     echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║                    HERO WEB DASHBOARD                         ║"
     echo "║                                                               ║"
-    echo "║  Real-time Agent Analytics & Monitoring Interface            ║"
+    echo "║  Honest operator surface for Hermes / Telegram / GBrain     ║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -83,39 +83,43 @@ create_directories() {
     mkdir -p "$CACHE_DIR" "$LOG_DIR" "$PID_DIR"
 }
 
-# Check if agents are running
+# Check reboot inputs
 check_agent_status() {
-    log "Checking agent status..."
-    
-    if [[ -f "$PID_DIR/agent_runtime.pid" ]]; then
-        local runtime_pid=$(cat "$PID_DIR/agent_runtime.pid")
-        if kill -0 "$runtime_pid" 2>/dev/null; then
-            info "✅ Agent runtime is running (PID: $runtime_pid)"
-        else
-            echo -e "${YELLOW}⚠️  Agent runtime is not running${NC}"
-            echo "Start agents with: ./agents/launch_agents.sh start"
-        fi
+    log "Checking reboot inputs..."
+
+    local hermes_config="$HOME/.hermes/config.yaml"
+    local workflows_root="/Users/rudlord/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS"
+    local brain_root="/Users/rudlord/brain"
+
+    if [[ -f "$hermes_config" ]]; then
+        info "✅ Hermes config present"
     else
-        echo -e "${YELLOW}⚠️  No agent runtime found${NC}"
-        echo "Start agents with: ./agents/launch_agents.sh start"
+        echo -e "${YELLOW}⚠️  Hermes config missing${NC}"
     fi
-    
-    # Check cache files
-    local cache_files=("agent_runtime_status.json" "agent_coordination.json" "langsmith_stats.json")
-    local missing_cache=()
-    
-    for cache_file in "${cache_files[@]}"; do
-        if [[ ! -f "$CACHE_DIR/$cache_file" ]]; then
-            missing_cache+=("$cache_file")
-        fi
-    done
-    
-    if [[ ${#missing_cache[@]} -gt 0 ]]; then
-        echo -e "${YELLOW}⚠️  Some cache files missing: ${missing_cache[*]}${NC}"
-        echo "The dashboard will work but may show limited data"
+
+    if [[ -d "$workflows_root" ]]; then
+        info "✅ WORKFLOWS repo present"
     else
-        info "✅ All cache files present"
+        echo -e "${YELLOW}⚠️  WORKFLOWS repo missing${NC}"
     fi
+
+    if [[ -d "$brain_root" ]]; then
+        info "✅ Brain repo present"
+    else
+        echo -e "${YELLOW}⚠️  Brain repo missing${NC}"
+    fi
+
+    if pgrep -fal 'hermes' >/dev/null 2>&1; then
+        info "✅ Hermes process activity detected"
+    else
+        echo -e "${YELLOW}⚠️  No Hermes process detected${NC}"
+    fi
+}
+
+pid_matches_dashboard() {
+    local pid="$1"
+    [[ -n "$pid" ]] || return 1
+    ps -p "$pid" -o command= 2>/dev/null | grep -Eq 'web_dashboard.py|uvicorn'
 }
 
 # Start web dashboard
@@ -123,7 +127,7 @@ start_web_dashboard() {
     log "Starting Hero Web Dashboard..."
     
     # Set environment variables
-    export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+    export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
     
     # Check if port 8080 is available
     if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then
@@ -147,12 +151,11 @@ start_web_dashboard() {
         echo ""
         echo -e "${CYAN}🌐 Web Dashboard URLs:${NC}"
         echo "  Main Dashboard: http://localhost:8080"
-        echo "  System Status:  http://localhost:8080/api/status"
-        echo "  Agent Details:  http://localhost:8080/api/agents"
-        echo "  Performance:    http://localhost:8080/api/performance"
-        echo "  Analytics:      http://localhost:8080/api/analytics"
+        echo "  Status JSON:    http://localhost:8080/api/status"
+        echo "  Health Check:   http://localhost:8080/api/healthz"
+        echo "  Readiness:      http://localhost:8080/api/readiness"
         echo ""
-        echo -e "${GREEN}Dashboard is running with real-time WebSocket updates${NC}"
+        echo -e "${GREEN}Dashboard is running with honest subsystem probes${NC}"
         echo -e "${YELLOW}Press Ctrl+C to stop or use './launch_web_dashboard.sh stop'${NC}"
         
         return 0
@@ -169,7 +172,7 @@ stop_web_dashboard() {
     
     if [[ -f "$PID_DIR/web_dashboard.pid" ]]; then
         local pid=$(cat "$PID_DIR/web_dashboard.pid")
-        if kill -0 $pid 2>/dev/null; then
+        if kill -0 $pid 2>/dev/null && pid_matches_dashboard "$pid"; then
             kill -TERM $pid
             sleep 2
             if kill -0 $pid 2>/dev/null; then
@@ -177,6 +180,9 @@ stop_web_dashboard() {
             fi
             rm -f "$PID_DIR/web_dashboard.pid"
             info "✅ Web dashboard stopped"
+        elif kill -0 $pid 2>/dev/null; then
+            error "PID file points to a non-dashboard process ($pid); refusing to kill it"
+            return 1
         else
             echo -e "${YELLOW}Web dashboard was not running${NC}"
             rm -f "$PID_DIR/web_dashboard.pid"
@@ -192,7 +198,7 @@ show_status() {
     
     if [[ -f "$PID_DIR/web_dashboard.pid" ]]; then
         local pid=$(cat "$PID_DIR/web_dashboard.pid")
-        if kill -0 $pid 2>/dev/null; then
+        if kill -0 $pid 2>/dev/null && pid_matches_dashboard "$pid"; then
             echo "  ✅ Running (PID: $pid)"
             echo "  🌐 URL: http://localhost:8080"
             
@@ -202,6 +208,8 @@ show_status() {
                 echo "Recent log entries:"
                 tail -5 "$LOG_DIR/web_dashboard.log" | sed 's/^/    /'
             fi
+        elif kill -0 $pid 2>/dev/null; then
+            echo "  ⚠️ PID file points to a different live process ($pid)"
         else
             echo "  ❌ Not running (stale PID file)"
             rm -f "$PID_DIR/web_dashboard.pid"
