@@ -1,0 +1,146 @@
+[project]
+name = "herodash"
+version = "1.0.0"
+description = "Hero Dashboard - Honest web operator surface for local stack monitoring"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi>=0.110.0",
+    "h11>=0.16.0",
+    "jinja2>=3.1.0",
+    "psutil>=5.9.0",
+    "pyyaml>=6.0.0",
+    "uvicorn>=0.29.0",
+]
+
+[tool.ruff]
+# Exclude directories
+exclude = [
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "archive_old_versions",
+    "*.pyc",
+    "*.pyo",
+]
+
+# Same as Black
+line-length = 120
+indent-width = 4
+
+# Assume Python 3.8+
+target-version = "py38"
+
+[tool.ruff.lint]
+# Enable pycodestyle (`E`), Pyflakes (`F`), isort (`I`), and other rules
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "YTT",    # flake8-2020
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "T10",    # flake8-debugger
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "PIE",    # flake8-pie
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "ARG",    # flake8-unused-arguments
+    "ERA",    # eradicate
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific rules
+]
+
+# Ignore specific rules that might be too strict for this project
+ignore = [
+    "E501",    # line too long (handled by formatter)
+    "PLR0913", # too many arguments
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "PLR2004", # magic value comparison
+    "N802",    # function name should be lowercase
+    "N806",    # variable in function should be lowercase
+    "SIM108",  # use ternary operator (can reduce readability)
+    "RET504",  # unnecessary variable assignment before return
+    "ISC001",  # implicit string concatenation (conflicts with formatter)
+]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces, rather than tabs
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Automatically detect line endings
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["herodash"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+# Allow unused imports in __init__.py files
+"__init__.py" = ["F401"]
+# Allow print statements and assert in tests
+"tests/**" = ["T201", "S101"]
+# Legacy/archive code can have more relaxed rules
+"archive_old_versions/**" = ["E", "F", "W"]
+# Modular_PROPOSAL is legacy code - relax most rules but keep critical ones
+"Modular_PROPOSAL/**" = ["ARG", "RET", "SIM", "PIE", "ERA", "TID", "RUF006", "F841", "E722", "F401", "RUF005"]
+# Legacy monitors and agents - relax some rules
+"monitors/**" = ["ARG", "RUF006", "SIM102", "PLW0603", "F841", "RET", "PLR", "E722", "F401"]
+"agents/**" = ["ARG", "PIE810", "PLW0603", "F841", "RUF006", "RET", "B007", "E722", "F401", "SIM"]
+"nats_*.py" = ["F401", "E722", "RUF013", "B007", "F841", "RUF006"]
+"inter_agent_communication.py" = ["F401", "E722", "RUF013", "SIM102", "RUF006"]
+"agent_*.py" = ["E722", "ARG001", "ARG002", "B027", "RUF013", "RUF006", "RET"]
+"run_communication_system.py" = ["PIE810", "E722", "SIM102", "B007", "ARG002", "RUF006", "B110", "B607", "B605"]
+"simple_cli_dashboard.py" = ["ARG002", "E501", "B007", "B605"]
+"test_communication_layer.py" = ["ARG", "F841"]
+"register_custom_agent.py" = ["B311"]
+"architecture_orchestrator.py" = ["ARG001"]
+"task_manager.py" = ["*"]
+"web_dashboard.py" = ["B607", "B310"]
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "archive_old_versions",
+    "Modular_PROPOSAL",
+]
+skips = [
+    "B404",  # import subprocess - needed for this project
+    "B603",  # subprocess without shell=True - we validate inputs
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "archive_old_versions",
+    "Modular_PROPOSAL",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
