@@ -145,12 +145,12 @@ These at least probe something real or consume measurable system state.
 
 ## Monitors that are actively dishonest today
 
-#### `monitors/claude_usage_monitor_optimized.py`
+### `monitors/claude_usage_monitor_optimized.py`
 - writes: `claude_usage.json`
 - issue: falls back to random mock token/session data
 - verdict: blocked from production use until mocks are removed
 
-#### `monitors/github_activity_monitor_optimized.py`
+### `monitors/github_activity_monitor_optimized.py`
 - writes: `github_activity.json`
 - issue: falls back to random contribution graph data
 - verdict: blocked from production use until fake fallback is removed

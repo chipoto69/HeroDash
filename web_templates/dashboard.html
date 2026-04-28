@@ -295,7 +295,9 @@
       position: relative;
       background:
         linear-gradient(160deg, rgba(13,18,24,0.52), rgba(6,8,11,0.96)),
-        url("https://picsum.photos/seed/hermes-control-room/1200/1400") center/cover;
+        radial-gradient(circle at 30% 40%, rgba(131,185,255,0.08), transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(119,214,167,0.06), transparent 50%),
+        linear-gradient(135deg, #0a0d12 0%, #0d1218 50%, #080a0d 100%);
       box-shadow: inset 0 1px 1px rgba(255,255,255,0.14);
     }
 
@@ -886,9 +888,58 @@
     async function refresh() {
       try {
         const response = await fetch("/api/status", { cache: "no-store" });
+        if (!response.ok) {
+          // Construct stale/error state
+          const stalePayload = {
+            overview: {
+              timestamp: new Date().toISOString(),
+              environment: "local-dev",
+              mode: "error",
+              version: "stale"
+            },
+            cards: {},
+            card_order: fallbackOrder
+          };
+          fallbackOrder.forEach((name) => {
+            stalePayload.cards[name] = {
+              name: name,
+              status: "down",
+              source: "refresh-failed",
+              timestamp: new Date().toISOString(),
+              freshness_seconds: 0,
+              last_error: `Failed to refresh: HTTP ${response.status}`,
+              details: {}
+            };
+          });
+          render(stalePayload);
+          return;
+        }
         render(await response.json());
       } catch (error) {
         console.error("Dashboard refresh failed", error);
+        // Construct stale/error state for network errors
+        const stalePayload = {
+          overview: {
+            timestamp: new Date().toISOString(),
+            environment: "local-dev",
+            mode: "error",
+            version: "stale"
+          },
+          cards: {},
+          card_order: fallbackOrder
+        };
+        fallbackOrder.forEach((name) => {
+          stalePayload.cards[name] = {
+            name: name,
+            status: "down",
+            source: "refresh-failed",
+            timestamp: new Date().toISOString(),
+            freshness_seconds: 0,
+            last_error: `Network error: ${error.message}`,
+            details: {}
+          };
+        });
+        render(stalePayload);
       }
     }
 

@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 from fastapi import FastAPI, Request as FastAPIRequest
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 import uvicorn
 
 try:
@@ -365,12 +366,17 @@ def build_alerts(cards: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "items": items,
         "summary": "All operator surfaces healthy" if not items else f"{len(items)} surfaces need attention",
     }
+    # Find the message from the highest severity alert
+    last_error = None
+    if items:
+        highest_item = next((item for item in items if item["status"] == highest), None)
+        last_error = highest_item["message"] if highest_item else items[0]["message"]
     return make_probe(
         name="alerts",
         status=highest,
         source="hero-aggregator",
         details=details,
-        last_error=items[0]["message"] if items else None,
+        last_error=last_error,
     )
 
 
@@ -534,18 +540,29 @@ class DashboardRuntime:
         last_error: str | None = None
 
         if url:
-            request = Request(url, headers=headers or {}, method="GET")
-            try:
-                with urlopen(request, timeout=4) as response:  # nosec B310 - fixed config URL
+            # Validate scheme
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                last_error = f"GBrain URL has invalid scheme: {parsed.scheme}"
+            else:
+                # Use sanitized URL and filter headers
+                safe_url = sanitized_url or url
+                # Filter headers: only allow safe headers
+                allowed_headers = {"User-Agent", "Accept", "Content-Type"}
+                filtered_headers = {k: v for k, v in headers.items() if k in allowed_headers}
+                request = Request(safe_url, headers=filtered_headers, method="GET")
+                try:
+                    with urlopen(request, timeout=4) as response:
+                        endpoint_reachable = True
+                        http_status = getattr(response, "status", None)
+                except HTTPError as exc:
                     endpoint_reachable = True
-                    http_status = getattr(response, "status", None)
-            except HTTPError as exc:
-                endpoint_reachable = True
-                http_status = exc.code
-            except URLError as exc:
-                last_error = f"GBrain endpoint unreachable: {exc.reason}"
-            except Exception as exc:  # pragma: no cover - defensive
-                last_error = f"GBrain probe failed: {exc}"
+                    http_status = exc.code
+                except URLError as exc:
+                    last_error = f"GBrain endpoint unreachable: {exc.reason}"
+                except Exception as exc:  # pragma: no cover - defensive
+                    last_error = f"GBrain probe failed: {exc}"
 
         endpoint_ok = endpoint_reachable and (http_status is None or 200 <= http_status < 500)
 
@@ -659,7 +676,7 @@ runtime = DashboardRuntime()
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard_home(request: FastAPIRequest) -> HTMLResponse:
-    snapshot = runtime.snapshot()
+    snapshot = await run_in_threadpool(runtime.snapshot)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -669,12 +686,13 @@ async def dashboard_home(request: FastAPIRequest) -> HTMLResponse:
 
 @app.get("/api/status")
 async def api_status() -> JSONResponse:
-    return JSONResponse(runtime.snapshot())
+    snapshot = await run_in_threadpool(runtime.snapshot)
+    return JSONResponse(snapshot)
 
 
 @app.get("/api/healthz")
 async def healthz() -> JSONResponse:
-    snapshot = runtime.snapshot()
+    snapshot = await run_in_threadpool(runtime.snapshot)
     return JSONResponse(
         {
             "status": "ok",
@@ -688,7 +706,7 @@ async def healthz() -> JSONResponse:
 
 @app.get("/api/readiness")
 async def readiness() -> JSONResponse:
-    snapshot = runtime.snapshot()
+    snapshot = await run_in_threadpool(runtime.snapshot)
     statuses = [snapshot["cards"][name]["status"] for name in CARD_ORDER[:-1]]
     ready = all(status == "healthy" for status in statuses)
     return JSONResponse(

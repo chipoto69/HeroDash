@@ -129,7 +129,11 @@ check_agent_status() {
 pid_matches_dashboard() {
     local pid="$1"
     [[ -n "$pid" ]] || return 1
-    ps -p "$pid" -o command= 2>/dev/null | grep -Eq 'web_dashboard.py|uvicorn'
+    local cmd
+    cmd=$(ps -p "$pid" -o args= 2>/dev/null) || return 1
+    # Check for exact match of the dashboard command
+    [[ "$cmd" == *"web_dashboard.py"* ]] || return 1
+    return 0
 }
 
 # Start web dashboard
@@ -258,18 +262,29 @@ start_analytics() {
 # Stop analytics monitor
 stop_analytics() {
     log "Stopping analytics monitor..."
-    
+
     if [[ -f "$PID_DIR/analytics_monitor.pid" ]]; then
         local pid=$(cat "$PID_DIR/analytics_monitor.pid")
         if kill -0 $pid 2>/dev/null; then
-            kill -TERM $pid
-            sleep 2
-            if kill -0 $pid 2>/dev/null; then
-                kill -KILL $pid
+            # Validate that PID belongs to analytics_monitor process
+            local cmd
+            cmd=$(ps -p "$pid" -o args= 2>/dev/null) || cmd=""
+            if [[ "$cmd" == *"analytics_dashboard.py"* ]] || [[ "$cmd" == *"analytics_monitor"* ]]; then
+                kill -TERM $pid
+                sleep 2
+                if kill -0 $pid 2>/dev/null; then
+                    kill -KILL $pid
+                fi
+                rm -f "$PID_DIR/analytics_monitor.pid"
+                info "[OK] Analytics monitor stopped"
+            else
+                error "PID file points to a non-analytics process ($pid); refusing to kill it"
+                return 1
             fi
+        else
+            rm -f "$PID_DIR/analytics_monitor.pid"
+            info "[OK] Analytics monitor stopped (stale PID)"
         fi
-        rm -f "$PID_DIR/analytics_monitor.pid"
-        info "[OK] Analytics monitor stopped"
     fi
 }
 
