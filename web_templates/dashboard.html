@@ -27,6 +27,7 @@
       --mono: "Geist Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
       --sans: "Geist", "Outfit", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-heavy: cubic-bezier(0.32, 0.72, 0, 1);
     }
 
     * { box-sizing: border-box; }
@@ -175,6 +176,11 @@
     }
 
     .pill:active { transform: translateY(0) scale(0.98); }
+
+    .pillbutton {
+      appearance: none;
+      cursor: pointer;
+    }
 
     .hero {
       display: grid;
@@ -585,6 +591,272 @@
       font-size: 0.92rem;
     }
 
+    .operator-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
+      gap: 16px;
+      margin-top: 16px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .section-shell {
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 6px;
+      background: rgba(255,255,255,0.052);
+      box-shadow: 0 18px 50px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
+      animation: fadeUp 900ms var(--ease) both;
+      min-width: 0;
+    }
+
+    .section-core {
+      min-height: 100%;
+      border-radius: 22px;
+      padding: clamp(18px, 2vw, 26px);
+      background:
+        radial-gradient(circle at top right, rgba(119,214,167,0.08), transparent 16rem),
+        var(--core);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.12);
+      min-width: 0;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      min-width: 0;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(1.3rem, 2.1vw, 2rem);
+      line-height: 1;
+    }
+
+    .section-head p {
+      max-width: 680px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-button {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-width: 0;
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 18px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.045);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 700ms var(--ease-heavy), background 700ms var(--ease-heavy), border-color 700ms var(--ease-heavy);
+    }
+
+    .action-button:hover {
+      transform: translateY(-2px);
+      border-color: var(--line-strong);
+      background: rgba(255,255,255,0.074);
+    }
+
+    .action-button:active { transform: translateY(0) scale(0.985); }
+    .action-button[disabled] { cursor: wait; opacity: 0.68; transform: none; }
+
+    .action-button strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.98rem;
+      overflow-wrap: anywhere;
+    }
+
+    .action-button span {
+      display: block;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .action-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      color: var(--healthy);
+      font-family: var(--mono);
+      transition: transform 700ms var(--ease-heavy), background 700ms var(--ease-heavy);
+    }
+
+    .action-button:hover .action-icon { transform: translateX(2px) translateY(-1px); }
+
+    .action-result {
+      margin-top: 14px;
+      padding: 13px;
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      min-height: 94px;
+    }
+
+    .action-result pre,
+    .inspector pre {
+      max-height: 260px;
+      overflow: auto;
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      color: #dfe6ef;
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      line-height: 1.52;
+    }
+
+    .labyrinth-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .journey-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 0 0 10px;
+      margin-bottom: 14px;
+    }
+
+    .journey-chip,
+    .crossing {
+      border: 1px solid rgba(255,255,255,0.11);
+      background: rgba(255,255,255,0.045);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 700ms var(--ease-heavy), border-color 700ms var(--ease-heavy), background 700ms var(--ease-heavy);
+    }
+
+    .journey-chip {
+      flex: 0 0 220px;
+      padding: 12px;
+      border-radius: 18px;
+      text-align: left;
+    }
+
+    .journey-chip:hover,
+    .crossing:hover,
+    .crossing.selected {
+      transform: translateY(-2px);
+      border-color: var(--line-strong);
+      background: rgba(255,255,255,0.072);
+    }
+
+    .journey-chip strong,
+    .crossing strong {
+      display: block;
+      margin-bottom: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .journey-chip small,
+    .crossing small {
+      display: block;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      line-height: 1.45;
+    }
+
+    .crossing-list {
+      display: grid;
+      gap: 8px;
+      max-height: 640px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .crossing {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 86px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 66px;
+      padding: 10px;
+      border-radius: 17px;
+      text-align: left;
+    }
+
+    .thread {
+      color: var(--sand);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .inspector {
+      position: sticky;
+      top: 96px;
+      min-height: 360px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .guidepost-list,
+    .atlas-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      max-height: 300px;
+      overflow: auto;
+    }
+
+    .guidepost,
+    .atlas-item {
+      padding: 11px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      background: rgba(255,255,255,0.04);
+      line-height: 1.42;
+    }
+
+    .guidepost strong,
+    .atlas-item strong { display: block; margin-bottom: 5px; }
+    .guidepost p,
+    .atlas-item p { margin: 0; color: var(--muted); font-size: 0.84rem; }
+
+    .atlas-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+      min-width: 0;
+    }
+
+    .operator-grid > *,
+    .labyrinth-layout > *,
+    .atlas-grid > * { min-width: 0; }
+
     code {
       color: var(--accent);
       font-family: var(--mono);
@@ -635,6 +907,10 @@
       .card-shell.telegram,
       .card-shell.gbrain,
       .card-shell.workflows { grid-column: 1 / -1; }
+      .operator-grid,
+      .labyrinth-layout,
+      .atlas-grid { grid-template-columns: 1fr; }
+      .inspector { position: static; }
       .alert-items { grid-template-columns: 1fr; }
     }
 
@@ -662,7 +938,8 @@
 
       .nav-actions,
       .pill,
-      .button {
+      .button,
+      .action-button {
         width: 100%;
         justify-content: space-between;
       }
@@ -679,6 +956,16 @@
       .grid { gap: 10px; }
       .card-shell { min-height: 0; }
       .micro-grid { grid-template-columns: 1fr; }
+      .section-head { flex-direction: column; }
+      .crossing { grid-template-columns: 1fr; }
+      .journey-strip {
+        overflow: visible;
+        flex-direction: column;
+      }
+      .journey-chip {
+        width: 100%;
+        flex-basis: auto;
+      }
     }
   </style>
 </head>
@@ -694,6 +981,7 @@
       </div>
       <div class="nav-actions">
         <a class="pill" href="/api/status">status json</a>
+        <a class="pill" href="/api/labyrinth">labyrinth json</a>
         <a class="pill" href="/api/readiness">readiness</a>
       </div>
     </nav>
@@ -721,8 +1009,72 @@
 
     <section id="cards" class="grid" aria-label="Subsystem cards"></section>
 
+    <section class="operator-grid" aria-label="Executable dashboard controls">
+      <div class="section-shell">
+        <div class="section-core">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">action dock</div>
+              <h2>Run the safe checks.</h2>
+              <p>Every control is allowlisted server-side and writes a redacted audit event.</p>
+            </div>
+          </div>
+          <div id="action-list" class="action-list"></div>
+          <div id="action-result" class="action-result">
+            <span class="source">No action run in this browser session yet.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-shell">
+        <div class="section-core">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">labyrinth map</div>
+              <h2>Journeys, crossings, evidence.</h2>
+              <p>Live probes and executable actions are normalized into a timeline with guideposts.</p>
+            </div>
+            <button class="pill pillbutton" id="labyrinth-refresh" type="button">refresh map</button>
+          </div>
+          <div id="journey-strip" class="journey-strip"></div>
+          <div class="labyrinth-layout">
+            <div id="crossing-list" class="crossing-list"></div>
+            <aside id="inspector" class="inspector" aria-label="Crossing inspector"></aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="atlas-grid" aria-label="Skill and cron inventory">
+      <div class="section-shell">
+        <div class="section-core">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">skill atlas</div>
+              <h2>Local operator skills.</h2>
+            </div>
+            <span class="status status-stale" id="skill-count">0</span>
+          </div>
+          <div id="skill-atlas" class="atlas-list"></div>
+        </div>
+      </div>
+      <div class="section-shell">
+        <div class="section-core">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">cron gate</div>
+              <h2>Scheduled autonomy.</h2>
+            </div>
+            <span class="status status-stale" id="cron-count">0</span>
+          </div>
+          <div id="cron-gate" class="atlas-list"></div>
+          <div id="guideposts" class="guidepost-list"></div>
+        </div>
+      </div>
+    </section>
+
     <footer class="footer">
-      <span>Polling <code>/api/status</code> every 10s. Freshness is measured from adapter evidence, not assumed health.</span>
+      <span>Polling <code>/api/status</code> and <code>/api/labyrinth</code>. Actions are fixed registry entries, not shell input.</span>
       <span id="footer-mode">mode: unknown</span>
     </footer>
   </main>
@@ -730,6 +1082,8 @@
   <script>
     const initialData = {{ initial_data | tojson }};
     const fallbackOrder = ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"];
+    let currentLabyrinth = null;
+    let selectedCrossingId = null;
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -878,6 +1232,164 @@
       }).join("");
     }
 
+    function renderActions(payload) {
+      const actions = payload.actions || [];
+      const target = document.getElementById("action-list");
+      target.innerHTML = actions.map((action) => `
+        <button class="action-button" type="button" data-action-id="${escapeHtml(action.id)}">
+          <span>
+            <strong>${escapeHtml(action.label)}</strong>
+            <span>${escapeHtml(action.description)}</span>
+          </span>
+          <span class="action-icon">/</span>
+        </button>
+      `).join("");
+      target.querySelectorAll("button[data-action-id]").forEach((button) => {
+        button.addEventListener("click", () => runAction(button.dataset.actionId));
+      });
+    }
+
+    function renderActionResult(event) {
+      const result = document.getElementById("action-result");
+      const status = event.status || "unknown";
+      const output = event.stderr_preview || event.stdout_preview || "No output captured.";
+      result.innerHTML = `
+        <span class="status status-${status === "succeeded" ? "healthy" : "degraded"}">${escapeHtml(status)}</span>
+        <span class="source">${escapeHtml(event.label || event.action_id || "action")} / exit ${escapeHtml(event.exit_code)} / ${escapeHtml(event.duration_ms)}ms</span>
+        <pre>${escapeHtml(output)}</pre>
+      `;
+    }
+
+    async function runAction(actionId) {
+      const buttons = [...document.querySelectorAll(".action-button")];
+      buttons.forEach((button) => button.disabled = true);
+      document.getElementById("action-result").innerHTML = `<span class="status status-stale">running</span><span class="source">${escapeHtml(actionId)}</span>`;
+      try {
+        const response = await fetch(`/api/actions/${encodeURIComponent(actionId)}`, { method: "POST", cache: "no-store" });
+        const event = await response.json();
+        renderActionResult(event);
+        await Promise.all([refresh(), refreshLabyrinth()]);
+      } catch (error) {
+        renderActionResult({ status: "failed", label: actionId, exit_code: "network", duration_ms: 0, stderr_preview: error.message });
+      } finally {
+        buttons.forEach((button) => button.disabled = false);
+      }
+    }
+
+    function renderJourneys(payload) {
+      const target = document.getElementById("journey-strip");
+      const journeys = payload.journeys || [];
+      target.innerHTML = journeys.map((journey) => `
+        <button class="journey-chip" type="button" data-journey-id="${escapeHtml(journey.id)}">
+          <strong>${escapeHtml(journey.title)}</strong>
+          <small>${escapeHtml(journey.source)} / ${escapeHtml(journey.status)}</small>
+          <small>${escapeHtml(journey.summary || "")}</small>
+        </button>
+      `).join("");
+      target.querySelectorAll("button[data-journey-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const first = (currentLabyrinth?.crossings || []).find((item) => item.journey_id === button.dataset.journeyId);
+          if (first) {
+            selectedCrossingId = first.id;
+            renderCrossings(currentLabyrinth);
+          }
+        });
+      });
+    }
+
+    function renderInspector(crossing) {
+      const target = document.getElementById("inspector");
+      if (!crossing) {
+        target.innerHTML = `<span class="source">Select a crossing to inspect evidence.</span>`;
+        return;
+      }
+      const evidence = crossing.evidence || {};
+      target.innerHTML = `
+        <span class="status status-${crossing.status === "succeeded" ? "healthy" : escapeHtml(crossing.status || "stale")}">${escapeHtml(crossing.status || "unknown")}</span>
+        <h2>${escapeHtml(crossing.label)}</h2>
+        <span class="source">${escapeHtml(crossing.type)} / ${escapeHtml(crossing.thread)} / ${escapeHtml(crossing.timestamp)}</span>
+        <p>${escapeHtml(crossing.summary || "No summary available.")}</p>
+        <pre>${escapeHtml(JSON.stringify(evidence, null, 2))}</pre>
+      `;
+    }
+
+    function renderCrossings(payload) {
+      const crossings = payload.crossings || [];
+      if (!selectedCrossingId && crossings.length) selectedCrossingId = crossings[crossings.length - 1].id;
+      const selected = crossings.find((item) => item.id === selectedCrossingId) || crossings[crossings.length - 1];
+      if (selected) selectedCrossingId = selected.id;
+      const target = document.getElementById("crossing-list");
+      target.innerHTML = crossings.slice().reverse().map((crossing) => `
+        <button class="crossing ${crossing.id === selectedCrossingId ? "selected" : ""}" type="button" data-crossing-id="${escapeHtml(crossing.id)}">
+          <span class="thread">${escapeHtml(crossing.thread)}</span>
+          <span>
+            <strong>${escapeHtml(crossing.label)}</strong>
+            <small>${escapeHtml(crossing.type)} / ${escapeHtml(crossing.summary || "")}</small>
+          </span>
+          <span class="status status-${crossing.status === "succeeded" ? "healthy" : escapeHtml(crossing.status || "stale")}">${escapeHtml(crossing.status || "unknown")}</span>
+        </button>
+      `).join("");
+      target.querySelectorAll("button[data-crossing-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedCrossingId = button.dataset.crossingId;
+          renderCrossings(currentLabyrinth);
+        });
+      });
+      renderInspector(selected);
+    }
+
+    function renderGuideposts(payload) {
+      const guideposts = payload.guideposts || [];
+      const target = document.getElementById("guideposts");
+      if (!guideposts.length) {
+        target.innerHTML = `<div class="guidepost"><strong>No guideposts</strong><p>No degraded crossings in the current map.</p></div>`;
+        return;
+      }
+      target.innerHTML = guideposts.slice(0, 8).map((item) => `
+        <div class="guidepost">
+          <strong>${escapeHtml(item.title)}</strong>
+          <p>${escapeHtml(item.summary)}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderAtlas(payload) {
+      const skills = payload.skills || [];
+      const cron = payload.cron || [];
+      document.getElementById("skill-count").textContent = String(skills.length);
+      document.getElementById("cron-count").textContent = String(cron.filter((item) => item.status === "configured").length);
+      document.getElementById("skill-atlas").innerHTML = skills.slice(0, 12).map((skill) => `
+        <div class="atlas-item">
+          <strong>${escapeHtml(skill.name)}</strong>
+          <p>${escapeHtml(skill.namespace)} / ${escapeHtml(skill.description)}</p>
+        </div>
+      `).join("") || `<div class="atlas-item"><strong>No skills found</strong><p>Skill roots were not readable.</p></div>`;
+      document.getElementById("cron-gate").innerHTML = cron.map((item) => `
+        <div class="atlas-item">
+          <strong>${escapeHtml(item.name)}</strong>
+          <p>${escapeHtml(item.status)} / ${escapeHtml(item.path)}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderLabyrinth(payload) {
+      currentLabyrinth = payload;
+      renderActions(payload);
+      renderJourneys(payload);
+      renderCrossings(payload);
+      renderAtlas(payload);
+      renderGuideposts(payload);
+    }
+
+    async function refreshLabyrinth() {
+      try {
+        const response = await fetch("/api/labyrinth", { cache: "no-store" });
+        if (response.ok) renderLabyrinth(await response.json());
+      } catch (error) {
+        document.getElementById("inspector").innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
     function render(payload) {
       document.getElementById("nav-updated").textContent = `updated ${payload.overview?.timestamp || "unknown"}`;
       document.getElementById("footer-mode").textContent = `mode: ${payload.overview?.mode || "unknown"} / ${payload.overview?.version || "unknown"}`;
@@ -944,7 +1456,10 @@
     }
 
     render(initialData);
+    refreshLabyrinth();
+    document.getElementById("labyrinth-refresh").addEventListener("click", refreshLabyrinth);
     setInterval(refresh, 10000);
+    setInterval(refreshLabyrinth, 15000);
   </script>
 </body>
 </html>

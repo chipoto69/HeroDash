@@ -8,16 +8,23 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from web_dashboard import (
+    ACTION_REGISTRY,
     DashboardRuntime,
     app,
     build_alerts,
+    build_labyrinth,
     env_int,
     env_path,
+    execute_action,
+    list_actions,
     make_probe,
     parse_topic_ownership,
+    preview_lines,
+    read_action_events,
     sanitize_url,
     summarize_factory_models,
     redact_process_line,
+    redact_text,
 )
 
 
@@ -184,3 +191,144 @@ def test_probe_droids_degraded_when_bridge_missing(monkeypatch, tmp_path):
     assert "droid_processes" not in probe["details"]
     assert "factory_processes" not in probe["details"]
     assert "Hermes Factory model" in probe["last_error"]
+
+
+def test_action_registry_is_public_and_allowlisted():
+    actions = list_actions()
+    ids = {action["id"] for action in actions}
+
+    assert {"refresh_status", "compile_dashboard", "run_reboot_tests", "launcher_status", "tail_logs"}.issubset(ids)
+    assert all("args" not in action for action in actions)
+    assert ACTION_REGISTRY["compile_dashboard"]["args"] == ["python3", "-m", "py_compile", "web_dashboard.py", "config.py"]
+
+
+def test_redact_text_scrubs_common_secret_shapes():
+    raw = "token=supersecret Authorization: Bearer abcdefghijklmnop https://user:pass@example.com/path?api_key=hidden"
+    redacted = redact_text(raw)
+
+    assert "supersecret" not in redacted
+    assert "abcdefghijklmnop" not in redacted
+    assert "user:pass" not in redacted
+    assert "hidden" not in redacted
+
+
+def test_preview_lines_keeps_tail_and_redacts():
+    preview = preview_lines("one\ntwo\npassword=secret\nthree", max_lines=2)
+
+    assert "one" not in preview
+    assert "secret" not in preview
+    assert "password=[redacted]" in preview
+
+
+def test_read_action_events_ignores_bad_lines(monkeypatch, tmp_path):
+    import web_dashboard
+
+    action_log = tmp_path / "actions.jsonl"
+    action_log.write_text('not-json\n{"id": "ok", "status": "succeeded"}\n')
+    monkeypatch.setattr(web_dashboard, "HERO_ACTION_LOG", action_log)
+
+    assert read_action_events() == [{"id": "ok", "status": "succeeded"}]
+
+
+def test_execute_action_records_redacted_command_output(monkeypatch, tmp_path):
+    import subprocess
+    import web_dashboard
+
+    monkeypatch.setattr(web_dashboard, "HERO_HOME", tmp_path)
+    monkeypatch.setattr(web_dashboard, "HERO_ACTION_LOG", tmp_path / "actions.jsonl")
+
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(args=args[0], returncode=0, stdout="api_key=secret-token", stderr="")
+
+    monkeypatch.setattr(web_dashboard.subprocess, "run", fake_run)
+
+    event = execute_action("compile_dashboard")
+
+    assert event["status"] == "succeeded"
+    assert "secret-token" not in event["stdout_preview"]
+    assert (tmp_path / "actions.jsonl").exists()
+
+
+def test_api_actions_and_unknown_action(monkeypatch):
+    import web_dashboard
+
+    client = TestClient(app)
+    monkeypatch.setattr(web_dashboard, "read_action_events", lambda limit=20: [])
+
+    actions = client.get("/api/actions")
+    missing = client.post("/api/actions/not-real")
+
+    assert actions.status_code == 200
+    assert any(action["id"] == "compile_dashboard" for action in actions.json()["actions"])
+    assert missing.status_code == 404
+
+
+def test_api_run_action_uses_allowlisted_executor(monkeypatch):
+    import web_dashboard
+
+    client = TestClient(app)
+    monkeypatch.setattr(
+        web_dashboard,
+        "execute_action",
+        lambda action_id: {
+            "id": "action-test",
+            "action_id": action_id,
+            "label": "Compile Dashboard",
+            "status": "succeeded",
+            "exit_code": 0,
+            "duration_ms": 4,
+            "stdout_preview": "ok",
+            "stderr_preview": "",
+        },
+    )
+
+    response = client.post("/api/actions/compile_dashboard")
+
+    assert response.status_code == 200
+    assert response.json()["action_id"] == "compile_dashboard"
+
+
+def test_build_labyrinth_includes_probe_crossings_and_failed_action(monkeypatch):
+    import web_dashboard
+
+    snapshot = {
+        "overview": {"timestamp": "2026-04-28T00:00:00Z"},
+        "card_order": ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"],
+        "cards": {
+            "hermes": make_probe(name="hermes", status="healthy", source="test", details={}),
+            "droids": make_probe(name="droids", status="degraded", source="test", details={}, last_error="bridge missing"),
+            "telegram": make_probe(name="telegram", status="healthy", source="test", details={}),
+            "gbrain": make_probe(name="gbrain", status="healthy", source="test", details={}),
+            "workflows": make_probe(name="workflows", status="healthy", source="test", details={}),
+            "alerts": make_probe(name="alerts", status="degraded", source="test", details={"summary": "1 alert"}, last_error="bridge missing"),
+        },
+    }
+    monkeypatch.setattr(
+        web_dashboard,
+        "read_action_events",
+        lambda limit=25: [
+            {
+                "id": "action-1",
+                "action_id": "compile_dashboard",
+                "label": "Compile Dashboard",
+                "status": "failed",
+                "exit_code": 1,
+                "duration_ms": 10,
+                "started_at": "2026-04-28T00:00:01Z",
+                "completed_at": "2026-04-28T00:00:02Z",
+                "stderr_preview": "password=[redacted]",
+                "stdout_preview": "",
+                "command": ["python3"],
+                "cwd": "/tmp",
+            }
+        ],
+    )
+    monkeypatch.setattr(web_dashboard, "discover_skill_inventory", lambda limit=60: [{"name": "taste", "namespace": "agents"}])
+    monkeypatch.setattr(web_dashboard, "cron_gate_snapshot", lambda: [{"name": "cron.yaml", "status": "missing"}])
+
+    payload = build_labyrinth(snapshot)
+
+    assert payload["journeys"][0]["id"] == "journey-current-dashboard"
+    assert any(crossing["id"] == "crossing-probe-droids" for crossing in payload["crossings"])
+    assert any(guidepost["title"] == "Compile Dashboard failed" for guidepost in payload["guideposts"])
+    assert "password=[redacted]" in str(payload)
