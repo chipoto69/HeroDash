@@ -1,238 +1,161 @@
-# HeroDash - Hero Core Command Centre
+# Hero Reboot Dashboard
 
-```
-    ██╗  ██╗███████╗██████╗  ██████╗      ██████╗ ██████╗ ██████╗ ███████╗
-    ██║  ██║██╔════╝██╔══██╗██╔═══██╗    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
-    ███████║█████╗  ██████╔╝██║   ██║    ██║     ██║   ██║██████╔╝█████╗  
-    ██╔══██║██╔══╝  ██╔══██╗██║   ██║    ██║     ██║   ██║██╔══██╗██╔══╝  
-    ██║  ██║███████╗██║  ██║╚██████╔╝    ╚██████╗╚██████╔╝██║  ██║███████╗
-    ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝      ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
-                                [ by Quantropy ]
-```
+Hero is now an honest web operator surface for the current stack, not a fake swarm demo.
 
-## 🚀 Overview
+It serves the operator-critical cards only:
+- Hermes
+- Factory Droids
+- Telegram
+- GBrain
+- WORKFLOWS
+- Alerts
 
-Hero Core is a comprehensive terminal-based dashboard that provides real-time monitoring of AI systems, development tools, and system resources. It features a beautiful, flicker-free interface with lazy refresh capabilities for optimal performance.
+Primary entrypoints:
+- UI: `http://127.0.0.1:8080/`
+- Status API: `http://127.0.0.1:8080/api/status`
+- Liveness: `http://127.0.0.1:8080/api/healthz`
+- Readiness: `http://127.0.0.1:8080/api/readiness`
 
-![Terminal Dashboard](https://img.shields.io/badge/Terminal-Dashboard-blue)
-![Version](https://img.shields.io/badge/Version-1.0-green)
-![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey)
+## What it actually does
 
-## 📚 Documentation
+The rebooted dashboard probes real local evidence instead of replaying old cache theater.
 
-This repository contains both the original Hero Core Dashboard and an optimized, fixed version with significant performance improvements:
+- Hermes: checks local Hermes process activity, gateway/webapi ports, and known profile configs
+- Telegram: checks Telegram-facing Hermes profiles plus canon/topic metadata
+- GBrain: checks Hermes MCP config, sanitized endpoint reachability, and local brain repo state
+- WORKFLOWS: checks the WORKFLOWS repo, key lane directories, file counts, and recent commit state
+- Alerts: aggregates any degraded, stale, or down subsystem into one operator-facing surface
 
-### Original Documentation
-- [Technical Documentation](docs/DOCUMENTATION.md) - Complete technical details
-- [User Guide](docs/USER_GUIDE.md) - Detailed usage instructions
-- [Quick Reference](QUICK_REFERENCE.txt) - Command cheat sheet
+If a subsystem is old, partial, or missing, Hero should say so plainly.
 
-### Optimized Version Documentation
-- [Optimization Summary](docs/OPTIMIZED_VERSION_FIXED.md) - Details of all optimizations
-- [Progress Log](docs/PROGRESS_LOG.md) - Complete history of improvements
-- [Optimization Summary (Detailed)](OPTIMIZATION_SUMMARY_FIXED.md) - Technical breakdown
-- [Optimized Version README](README_OPTIMIZED.md) - Usage instructions
+## What it does not do anymore
 
-### Key Improvements in Optimized Version
-- **20-30% CPU Usage Reduction** through command caching
-- **15-25% Faster Response Times** with intelligent caching
-- **40-50% Fewer System Calls** by reducing redundant operations
-- **Fixed Stability Issues** that caused immediate crashes
-- **Enhanced Compatibility** with older bash versions
+The reboot path does not present these as current operator truth:
+- fake NATS swarm topology
+- synthetic agent registries
+- Graphiti-first/Neo4j-first control-plane mythology
+- analytics dashboards pretending to be runtime health
+- random fallback data for tokens, GitHub, or agents
 
-## ✨ Features
+Legacy files remain in the repo, but they are not the canonical reboot path.
 
-### 🤖 AI Systems Monitoring
-- **Claude Code**: Active instances tracking with working directories
-- **Token Usage**: Real-time Claude token consumption with visual progress bar
-- **Qwen-code**: Runtime status monitoring
-- **VS Code**: Helper process tracking
+## Run it
 
-### 📊 GitHub Integration
-- **21-Day Activity Graph**: Visual representation of your contributions
-- **Contribution Stats**: Total contributions and current streak
-- **Activity Levels**: Color-coded visualization
+### Hermes-aware defaults
 
-### 🧠 Knowledge Base Systems
-- **Graphiti/Neo4j**: Temporal knowledge graph monitoring
-- **Redis**: Key-value store metrics
-- **Docker**: Container status and count
-- **Archive Files**: JSON data file tracking
+By default, the reboot expects local Rudy-style paths:
+- `~/.hermes/config.yaml`
+- `~/brain`
+- `~/wiki/queries/grok420system.md`
+- `~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS`
 
-### 💻 System Metrics
-- **CPU Usage**: Real-time percentage with visual bar
-- **Memory Usage**: System memory consumption
-- **Network**: Active connection monitoring
-
-## 📦 Installation
-
-### Prerequisites
-- macOS (tested on Darwin 24.5.0)
-- Python 3.x
-- Bash 4.0+
-
-### Optional Dependencies
-- Redis
-- Neo4j
-- Docker
-- Claude monitor (`ccm`)
-
-### Quick Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/HeroDash.git
-cd HeroDash
-```
-
-2. Make scripts executable:
-```bash
-chmod +x hero launch_hero.sh hero_core.sh
-chmod +x monitors/*.py utils/*.sh
-```
-
-3. Launch the dashboard:
-```bash
-./hero
-```
-
-## 🎮 Usage
-
-### Launch Methods
+You can override those with env vars:
 
 ```bash
-# Quick start (original)
-./hero
-
-# With system checks (original)
-./launch_hero.sh
-
-# Direct execution (original)
-./hero_core.sh
-
-# Optimized version
-./hero_optimized
-
-# Optimized version with setup
-./setup_optimized_fixed.sh
+export HERO_HERMES_CONFIG=~/.hermes/config.yaml
+export HERO_BRAIN_ROOT=~/brain
+export HERO_TELEGRAM_CANON=~/wiki/queries/grok420system.md
+export HERO_WORKFLOWS_ROOT=~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS
+export HERO_WEBAPI_PORT=8642
+export HERO_WORKSPACE_PORT=3011
+export HERO_DROID_BRIDGE_PORT=8645
+export HERO_FACTORY_SETTINGS=~/.factory/settings.json
 ```
 
-### Keyboard Commands
+Requirements:
+- Python 3
+- `fastapi`
+- `uvicorn`
+- `jinja2`
+- `PyYAML`
+- optional but useful local assets:
+  - `~/.hermes/config.yaml`
+  - `~/.hermes/profiles/`
+  - `~/.factory/settings.json`
+  - `~/.local/bin/droid`
+  - `~/brain`
+  - `~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS`
+  - `~/wiki/queries/grok420system.md`
 
-| Key | Action | Description |
-|-----|--------|-------------|
-| `T` | Refresh Tokens | Force update token/GitHub data |
-| `G` | Graphiti Details | Show knowledge graph statistics |
-| `N` | Neo4j Browser | Open http://localhost:7474 |
-| `C` | Claude Monitor | Launch ccm tool |
-| `H` | Help | Show command list |
-| `R` | Refresh | Force full screen refresh |
-| `Q` | Quit | Exit dashboard |
+Start the dashboard:
 
-## 📁 Project Structure
-
-```
-HeroDash/
-├── hero                      # Quick launcher
-├── launch_hero.sh           # Launcher with system checks
-├── hero_core.sh            # Main dashboard application
-├── hero_core_optimized_fixed.sh # Optimized dashboard (recommended)
-├── launch_hero_optimized_fixed.sh # Optimized launcher
-├── hero_optimized          # Symlink to optimized launcher
-├── monitors/               # Python monitoring scripts
-│   ├── claude_usage_monitor.py
-│   ├── github_activity_monitor.py
-│   └── graphiti_monitor.py
-├── utils/                  # Utility scripts
-│   ├── dashboard_control.sh
-│   └── dashboard_diagnostics.sh
-└── docs/                   # Documentation
-    ├── DOCUMENTATION.md    # Technical documentation
-    ├── USER_GUIDE.md       # User guide
-    ├── OPTIMIZED_VERSION_FIXED.md # Optimized version docs
-    └── PROGRESS_LOG.md     # Development progress log
-```
-
-## 🔧 Configuration
-
-Hero Core stores its configuration and cache in:
-```
-~/.hero_core/
-├── hero.log              # Activity log
-└── cache/                # Data cache
-    ├── claude_usage.json
-    ├── github_activity.json
-    └── graphiti_stats.json
-```
-
-### Refresh Rates
-- **Fast Updates** (3 seconds): AI systems, system metrics
-- **Lazy Updates** (30 seconds): Token usage, GitHub activity
-
-## 🛠️ Utilities
-
-### System Diagnostics
 ```bash
-./utils/dashboard_diagnostics.sh
+./launch_web_dashboard.sh start
 ```
 
-### Dashboard Control
+Other useful commands:
+
 ```bash
-# Stop all dashboards
-./utils/dashboard_control.sh stop
-
-# Check status
-./utils/dashboard_control.sh status
+./launch_web_dashboard.sh status
+./launch_web_dashboard.sh logs
+./launch_web_dashboard.sh stop
 ```
 
-## 📈 Performance
+You can also run the app directly:
 
-- **CPU Usage**: ~0.1-0.5% idle, ~1-2% during updates (optimized version 20-30% lower)
-- **Memory**: ~10-15 MB for bash, ~30 MB per Python monitor
-- **Update Method**: Cursor-based rendering (no screen flicker)
-- **Data Collection**: Asynchronous Python monitors with JSON caching
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-1. **"Loading token data..."** - Press `T` to force refresh
-2. **Screen flickers** - Ensure terminal supports ANSI escape codes
-3. **High CPU usage** - Increase `REFRESH_RATE` in hero_core.sh
-
-### View Logs
 ```bash
-tail -f ~/.hero_core/hero.log
+python3 web_dashboard.py
 ```
 
-## 🤝 Contributing
+## API contract
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Current contract shape:
 
-## 📝 License
+```json
+{
+  "overview": {
+    "timestamp": "2026-04-22T00:00:00Z",
+    "environment": "local-dev",
+    "mode": "production",
+    "version": "hero-reboot-v1"
+  },
+  "cards": {
+    "hermes": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "droids": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "telegram": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "gbrain": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "workflows": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "alerts": {"status": "healthy", "source": "hero-aggregator", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {"items": []}}
+  },
+  "card_order": ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"]
+}
+```
 
-This project is open source and available under the MIT License.
+Status semantics:
+- `healthy`: probe succeeded and freshness is acceptable
+- `degraded`: partial evidence or partial failure
+- `stale`: evidence exists but is too old
+- `down`: probe failed and no usable current evidence exists
 
-## 🙏 Credits
+## Docs worth reading
 
-Created by **Quantropy**
+- `docs/plans/2026-04-22-hero-reboot-implementation.md`
+- `docs/dashboard-runtime-contract.md`
+- `docs/dashboard-producers-audit.md`
+- `docs/hero-reboot-thin-slice.md`
 
-### Technologies Used
-- Bash scripting with ANSI escape codes
-- Python for data collection
-- JSON for inter-process communication
-- Terminal-based UI rendering
+## Validation
 
-## 🌟 Features Roadmap
+```bash
+python3 -m py_compile web_dashboard.py
+pytest -q tests/test_web_dashboard_reboot.py
+bash -n launch_web_dashboard.sh
+```
 
-- [ ] Real GitHub API integration
-- [ ] Claude API integration
-- [ ] Historical data persistence
-- [ ] Multi-platform support (Linux, Windows)
-- [ ] WebSocket real-time updates
-- [ ] Custom alert thresholds
-- [ ] Theme customization
+## Current reality check
 
----
+This repo still contains a lot of legacy NATS/analytics/terminal-dashboard material. The rebooted dashboard path is only:
+- `web_dashboard.py`
+- `web_templates/dashboard.html`
+- `launch_web_dashboard.sh`
+- `tests/test_web_dashboard_reboot.py`
+- the reboot docs in `docs/`
 
-**Hero Core v1.0** | Terminal Dashboard Excellence
+High-noise legacy docs that are now explicitly marked as historical context:
+- `ANALYTICS_GUIDE.md`
+- `NATS_GUIDE.md`
+- `README_UPDATED.md`
+- `cli_agent_briefing.md`
+- `CLAUDE.md`
+
+If documentation elsewhere disagrees with those files, trust the reboot path first.

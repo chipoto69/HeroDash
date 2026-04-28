@@ -1,86 +1,65 @@
-# Hero Core Dashboard - Optimized and Fixed Version
+# Hero Reboot Notes for Legacy Operators
 
-This repository contains an optimized and fixed version of the Hero Core Dashboard, addressing performance issues and stability problems in the original implementation.
+This file used to describe the optimized terminal dashboard. That is no longer the primary product story for the reboot branch.
 
-## What Was Fixed
+Current reality:
+- the canonical surface is the web reboot dashboard
+- the canonical launcher is `./launch_web_dashboard.sh`
+- the canonical APIs are `/api/status`, `/api/healthz`, and `/api/readiness`
+- the canonical cards are Hermes, Telegram, GBrain, WORKFLOWS, and Alerts
 
-1. **Crash Issues** - Resolved immediate crashes caused by syntax errors and compatibility issues
-2. **Bash Compatibility** - Fixed problems with associative arrays not supported in older bash versions
-3. **Stability Improvements** - Enhanced error handling throughout the codebase
+## Why keep this file
 
-## Key Optimizations
+A lot of legacy docs and muscle memory still point at “optimized dashboard” language. Keeping this file, but rewriting it honestly, prevents operators from assuming the old terminal/analytics stack is the supported path on `hero-reboot-phase0`.
 
-### Performance Enhancements
-- **Command Caching System** - Reduces redundant system calls by caching expensive operations
-- **Faster JSON Parsing** - Uses `jq` for faster JSON operations when available
-- **Reduced Process Creation** - Minimizes subprocess creation through intelligent caching
-- **Time-based Updates** - Prevents excessive API calls with smart update limiting
-
-### Code Quality Improvements
-- **Better Error Handling** - Robust fallback mechanisms and error reporting
-- **Modular Design** - Cleaner code organization and separation of concerns
-- **Improved Documentation** - Comprehensive documentation of all optimizations
-
-## Performance Benefits
-
-- **20-30% CPU Usage Reduction**
-- **15-25% Faster Response Times**
-- **40-50% Fewer System Calls**
-- **30-40% Fewer Process Creations**
-
-## Files Created
-
-- `hero_core_optimized_fixed.sh` - Main optimized dashboard script
-- `launch_hero_optimized_fixed.sh` - Optimized launcher
-- `monitors/claude_usage_monitor_optimized.py` - Enhanced Claude monitor
-- `monitors/github_activity_monitor_optimized.py` - Enhanced GitHub monitor
-- `setup_optimized_fixed.sh` - Automated setup script
-- `requirements_optimized.txt` - Updated dependencies
-- `docs/OPTIMIZED_VERSION_FIXED.md` - Documentation of optimizations
-- `OPTIMIZATION_SUMMARY_FIXED.md` - Detailed summary of all improvements
-
-## Usage
-
-To use the optimized version:
+## Reboot-first usage
 
 ```bash
-# Quick start
-./hero_optimized
-
-# Or directly
-./launch_hero_optimized_fixed.sh
+./launch_web_dashboard.sh start
+./launch_web_dashboard.sh status
+./launch_web_dashboard.sh logs
+./launch_web_dashboard.sh stop
 ```
 
-## Installation
+Direct launch:
 
-1. Run the setup script:
-   ```bash
-   ./setup_optimized_fixed.sh
-   ```
+```bash
+python3 web_dashboard.py
+```
 
-2. For best performance, ensure `jq` is installed:
-   ```bash
-   # macOS
-   brew install jq
-   
-   # Ubuntu/Debian
-   sudo apt-get install jq
-   ```
+## What changed from the old optimized story
 
-## Compatibility
+Removed as primary framing:
+- terminal-first dashboard narrative
+- old Graphiti/Neo4j-first worldview
+- NATS-centric operator claims
+- analytics-as-truth framing
 
-The optimized version maintains full backward compatibility with the original dashboard:
-- Same UI layout and appearance
-- Identical keyboard controls
-- Compatible with existing cache files
-- No breaking changes to configuration
+Added as primary framing:
+- Hermes support and runtime visibility
+- Telegram topic/lane visibility
+- GBrain MCP and repo health
+- WORKFLOWS lane presence and recency
+- explicit alert aggregation
+- honest liveness vs readiness endpoints
 
-## Testing
+## Endpoint summary
 
-The dashboard has been tested and verified to:
-- Launch without crashing
-- Display all monitoring sections correctly
-- Handle keyboard input properly
-- Cleanly terminate when quit
+- `/api/status`: full five-card payload
+- `/api/healthz`: dashboard process is alive
+- `/api/readiness`: operator dependencies are healthy enough to trust
 
-Enjoy your optimized and stabilized Hero Core Dashboard!
+`/api/readiness` returns `503` when one or more primary cards are not healthy.
+
+## Suggested verification
+
+```bash
+python3 -m py_compile web_dashboard.py
+pytest -q tests/test_web_dashboard_reboot.py
+curl http://127.0.0.1:8080/api/healthz
+curl http://127.0.0.1:8080/api/readiness
+```
+
+## Legacy note
+
+The old optimized terminal assets may still be useful for archaeology or migration, but they should not be read as the current Hero reboot contract.

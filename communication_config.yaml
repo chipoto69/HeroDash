@@ -1,0 +1,191 @@
+# NATS Inter-Agentic Communication System Configuration
+
+# Environment settings
+environment: "dev"
+
+# NATS Configuration
+nats:
+  url: "nats://localhost:4223"
+  streams:
+    tasks:
+      retention: "WorkQueue"
+      max_msgs: 10000
+      max_age: "24h"
+    events:
+      retention: "Limits"
+      max_msgs: 50000
+      max_age: "7d"
+    coordination:
+      retention: "Limits" 
+      max_msgs: 25000
+      max_age: "48h"
+
+# Agent Configuration
+agents:
+  # System agents that are always created
+  system_agents:
+    - type: "task_distributor"
+      name: "Primary Task Distributor"
+      capabilities: ["task_distribution", "coordination", "load_balancing"]
+      max_concurrent_tasks: 20
+      
+    - type: "monitor"
+      name: "System Monitor"
+      capabilities: ["monitoring", "health_check", "metrics", "alerting"]
+      max_concurrent_tasks: 15
+
+  # Auto-scaling configuration
+  auto_scale:
+    enabled: true
+    min_agents: 3
+    max_agents: 15
+    scale_threshold: 0.8  # Scale up when 80% loaded
+    scale_down_threshold: 0.3  # Scale down when 30% loaded
+    scale_up_cooldown: 60  # seconds
+    scale_down_cooldown: 300  # seconds
+
+# Monitoring and Metrics
+monitoring:
+  metrics_interval: 30  # seconds
+  health_check_interval: 60  # seconds
+  cleanup_interval: 300  # seconds
+  
+  # Performance thresholds
+  thresholds:
+    task_completion_rate: 0.95  # 95% task completion rate
+    average_response_time: 5.0  # seconds
+    agent_failure_rate: 0.1  # 10% failure rate tolerance
+    message_latency: 100  # milliseconds
+
+# Dashboard Configuration
+dashboard:
+  enabled: true
+  port: 8080
+  auto_launch: false
+  refresh_interval: 5  # seconds
+  
+  # Dashboard features
+  features:
+    real_time_metrics: true
+    agent_visualization: true
+    task_tracking: true
+    system_logs: true
+
+# Task Processing
+task_processing:
+  # Default task timeout
+  default_timeout: 300  # seconds
+  
+  # Maximum retries for failed tasks
+  max_retries: 3
+  
+  # Task priority levels
+  priorities:
+    critical: 1
+    high: 2
+    medium: 3
+    low: 4
+  
+  # Task queuing limits
+  queue_limits:
+    critical: 1000
+    high: 2000
+    medium: 5000
+    low: 10000
+
+# Security Configuration
+security:
+  authentication:
+    enabled: false  # Set to true for production
+    method: "token"  # or "certificate"
+    
+  authorization:
+    enabled: false  # Set to true for production
+    role_based: true
+    
+  encryption:
+    tls_enabled: false  # Set to true for production
+    cert_file: ""
+    key_file: ""
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  
+  # Log file configuration
+  files:
+    system: "~/.hero_core/communication_system.log"
+    agents: "~/.hero_core/agents.log"
+    tasks: "~/.hero_core/tasks.log"
+    
+  # Log rotation
+  rotation:
+    max_size: "10MB"
+    backup_count: 5
+    
+  # What to log
+  log_categories:
+    task_creation: true
+    task_completion: true
+    agent_registration: true
+    agent_failures: true
+    system_events: true
+    performance_metrics: true
+
+# Integration Settings
+integrations:
+  # LangSmith integration
+  langsmith:
+    enabled: true
+    project_name: "hero-communication-system"
+    
+  # Chimera framework integration
+  chimera:
+    enabled: true
+    bridge_enabled: true
+    
+  # External databases
+  databases:
+    # Knowledge graph integration
+    neo4j:
+      enabled: false
+      uri: "bolt://localhost:7687"
+      
+    # Vector database
+    chromadb:
+      enabled: false
+      path: "~/.hero_core/chromadb"
+
+# Development and Testing
+development:
+  # Debug settings
+  debug_mode: false
+  
+  # Testing configuration
+  test_mode: false
+  mock_agents: 0
+  
+  # Performance testing
+  load_testing:
+    enabled: false
+    concurrent_tasks: 100
+    duration_seconds: 300
+
+# Production Optimizations
+production:
+  # Connection pooling
+  connection_pool:
+    size: 10
+    max_overflow: 20
+    
+  # Message batching
+  batching:
+    enabled: true
+    batch_size: 100
+    flush_interval: 1000  # milliseconds
+    
+  # Caching
+  caching:
+    enabled: true
+    ttl: 3600  # seconds
+    max_size: 1000  # entries
