@@ -1,0 +1,79 @@
+# CODEOWNERS file for herodash
+# 
+# This file defines code ownership for the Hero Dashboard repository.
+# When a pull request is opened that modifies files matching these patterns,
+# the listed individuals/teams will be automatically requested for review.
+#
+# Format: <pattern> <owner1> [<owner2> ...]
+# Patterns are matched using standard gitignore pattern matching.
+# Later matches take precedence over earlier ones.
+
+# Default owner for everything in the repository
+# This ensures all changes get reviewed by the project maintainer
+* @chipoto69
+
+# Core Dashboard System
+# Main dashboard scripts and launchers
+/hero_core*.sh @chipoto69
+/launch_*.sh @chipoto69
+/setup_*.sh @chipoto69
+/web_dashboard.py @chipoto69
+
+# Agent System
+# All agent-related code including runtime, workflows, and integrations
+/agents/ @chipoto69
+/agent_*.py @chipoto69
+/register_custom_agent.py @chipoto69
+
+# NATS Communication Layer
+# NATS messaging infrastructure and coordination
+/nats_*.py @chipoto69
+/inter_agent_communication.py @chipoto69
+/communication_config.yaml @chipoto69
+/run_communication_system.py @chipoto69
+
+# Monitors
+# Monitoring scripts for various subsystems
+/monitors/ @chipoto69
+
+# Task Management
+# Task coordination and management systems
+/task_manager.py @chipoto69
+/architecture_orchestrator.py @chipoto69
+
+# Documentation
+# All documentation files require review to ensure accuracy
+*.md @chipoto69
+/docs/ @chipoto69
+
+# Configuration Files
+# Critical configuration that affects system behavior
+*.yaml @chipoto69
+*.yml @chipoto69
+.env.example @chipoto69
+/config.py @chipoto69
+
+# Web Templates
+# Frontend templates and assets
+/web_templates/ @chipoto69
+
+# Tests
+# Test files to ensure code quality
+/tests/ @chipoto69
+test_*.py @chipoto69
+
+# Utilities
+# Shared utility modules
+/utils/ @chipoto69
+
+# Security-sensitive files
+# Extra scrutiny for security-related documentation and configs
+/SECURITY.md @chipoto69
+
+# Build and Dependency Files
+# Changes to dependencies require careful review
+requirements*.txt @chipoto69
+
+# GitHub-specific files
+# Workflow configurations and GitHub metadata
+/.github/ @chipoto69
