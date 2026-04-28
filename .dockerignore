@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+venv
+env
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+.hero_core/
+
+# Archives and backups
+archive_old_versions/
+*.backup
+*.bak
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Legacy/unused files
+hero_core.sh
+hero_core_backup.sh
+hero_core_optimized.sh
+hero_core_optimized_fixed.sh
+launch_hero.sh
+launch_hero_optimized.sh
+launch_hero_optimized_fixed.sh
+simple_cli_dashboard.py
+ANALYTICS_GUIDE.md
+NATS_GUIDE.md
+README_UPDATED.md
+README_OPTIMIZED.md
+cli_agent_briefing.md
+CLAUDE.md
+
+# Modular proposal (legacy)
+Modular_PROPOSAL/
+
+# Monitors (legacy)
+monitors/
+
+# Agents (legacy)
+agents/
+
+# NATS-related (legacy)
+*nats*.py
+inter_agent_communication.py
+run_communication_system.py
+task_manager.py
+architecture_orchestrator.py
+agent_*.py
+communication_config.yaml
