@@ -335,7 +335,7 @@ def execute_action(action_id: str) -> dict[str, Any]:
     except subprocess.TimeoutExpired as exc:
         status = "failed"
         exit_code = 124
-        stdout = exc.stdout or ""
+        stdout = exc.stdout.decode("utf-8", errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
         stderr = f"Action timed out after {spec.get('timeout', 30)}s"
     except Exception as exc:  # pragma: no cover - defensive
         status = "failed"
