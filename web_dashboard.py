@@ -692,13 +692,13 @@ async def api_status() -> JSONResponse:
 
 @app.get("/api/healthz")
 async def healthz() -> JSONResponse:
-    snapshot = await run_in_threadpool(runtime.snapshot)
+    # Return cheap process-alive response without expensive snapshot
     return JSONResponse(
         {
             "status": "ok",
             "dashboard": "alive",
-            "overall": snapshot["cards"]["alerts"]["status"],
-            "timestamp": snapshot["overview"]["timestamp"],
+            "overall": "ok",
+            "timestamp": iso_now(),
         },
         status_code=200,
     )

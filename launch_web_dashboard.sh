@@ -58,15 +58,20 @@ check_dependencies() {
     fi
     
     # Check required Python packages
-    local required_packages=("fastapi" "uvicorn" "jinja2")
+    local required_packages=("fastapi" "uvicorn" "jinja2" "pyyaml")
     local missing_packages=()
-    
+
     for package in "${required_packages[@]}"; do
-        if ! python3 -c "import $package" 2>/dev/null; then
+        # Special case: pyyaml imports as yaml
+        local import_name="$package"
+        if [[ "$package" == "pyyaml" ]]; then
+            import_name="yaml"
+        fi
+        if ! python3 -c "import $import_name" 2>/dev/null; then
             missing_packages+=("$package")
         fi
     done
-    
+
     if [[ ${#missing_packages[@]} -gt 0 ]]; then
         error "Missing required packages: ${missing_packages[*]}"
         echo ""
@@ -74,7 +79,7 @@ check_dependencies() {
         echo "  pip install ${missing_packages[*]}"
         echo ""
         echo "Or install all web dashboard dependencies:"
-        echo "  pip install fastapi uvicorn jinja2"
+        echo "  pip install fastapi uvicorn jinja2 pyyaml>=6.0.0"
         exit 1
     fi
     
@@ -148,7 +153,7 @@ start_web_dashboard() {
     if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then
         error "Port 8080 is already in use"
         echo "Stop the existing service or use a different port"
-        exit 1
+        return 1
     fi
     
     # Start dashboard in background
@@ -187,15 +192,21 @@ stop_web_dashboard() {
     
     if [[ -f "$PID_DIR/web_dashboard.pid" ]]; then
         local pid=$(cat "$PID_DIR/web_dashboard.pid")
-        if kill -0 $pid 2>/dev/null && pid_matches_dashboard "$pid"; then
-            kill -TERM $pid
+        # Validate PID is a plain unsigned integer
+        if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+            error "Invalid PID in pidfile: '$pid'"
+            rm -f "$PID_DIR/web_dashboard.pid"
+            return 1
+        fi
+        if kill -0 "$pid" 2>/dev/null && pid_matches_dashboard "$pid"; then
+            kill -TERM "$pid"
             sleep 2
-            if kill -0 $pid 2>/dev/null; then
-                kill -KILL $pid
+            if kill -0 "$pid" 2>/dev/null; then
+                kill -KILL "$pid"
             fi
             rm -f "$PID_DIR/web_dashboard.pid"
             info "[OK] Web dashboard stopped"
-        elif kill -0 $pid 2>/dev/null; then
+        elif kill -0 "$pid" 2>/dev/null; then
             error "PID file points to a non-dashboard process ($pid); refusing to kill it"
             return 1
         else
@@ -213,17 +224,23 @@ show_status() {
     
     if [[ -f "$PID_DIR/web_dashboard.pid" ]]; then
         local pid=$(cat "$PID_DIR/web_dashboard.pid")
-        if kill -0 $pid 2>/dev/null && pid_matches_dashboard "$pid"; then
+        # Validate PID is a plain unsigned integer
+        if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+            echo "  [ERROR] Invalid PID in pidfile: '$pid'"
+            rm -f "$PID_DIR/web_dashboard.pid"
+            return
+        fi
+        if kill -0 "$pid" 2>/dev/null && pid_matches_dashboard "$pid"; then
             echo "  [OK] Running (PID: $pid)"
             echo "  URL: http://localhost:8080"
-            
+
             # Show recent log entries
             if [[ -f "$LOG_DIR/web_dashboard.log" ]]; then
                 echo ""
                 echo "Recent log entries:"
                 tail -5 "$LOG_DIR/web_dashboard.log" | sed 's/^/    /'
             fi
-        elif kill -0 $pid 2>/dev/null; then
+        elif kill -0 "$pid" 2>/dev/null; then
             echo "  [WARN] PID file points to a different live process ($pid)"
         else
             echo "  [DOWN] Not running (stale PID file)"
@@ -240,9 +257,20 @@ start_analytics() {
     
     if [[ -f "$PID_DIR/analytics_monitor.pid" ]]; then
         local existing_pid=$(cat "$PID_DIR/analytics_monitor.pid")
-        if kill -0 $existing_pid 2>/dev/null; then
-            info "Analytics monitor already running (PID: $existing_pid)"
-            return 0
+        if kill -0 "$existing_pid" 2>/dev/null; then
+            # Verify process command-line matches analytics monitor
+            local cmd
+            cmd=$(ps -p "$existing_pid" -o args= 2>/dev/null) || cmd=""
+            if [[ "$cmd" == *"analytics_dashboard.py"* ]] || [[ "$cmd" == *"analytics_monitor"* ]]; then
+                info "Analytics monitor already running (PID: $existing_pid)"
+                return 0
+            else
+                # Stale pidfile pointing to different process
+                rm -f "$PID_DIR/analytics_monitor.pid"
+            fi
+        else
+            # Process no longer exists, remove stale pidfile
+            rm -f "$PID_DIR/analytics_monitor.pid"
         fi
     fi
     
@@ -265,15 +293,21 @@ stop_analytics() {
 
     if [[ -f "$PID_DIR/analytics_monitor.pid" ]]; then
         local pid=$(cat "$PID_DIR/analytics_monitor.pid")
-        if kill -0 $pid 2>/dev/null; then
+        # Validate PID is a plain unsigned integer
+        if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+            error "Invalid PID in analytics pidfile: '$pid'"
+            rm -f "$PID_DIR/analytics_monitor.pid"
+            return 1
+        fi
+        if kill -0 "$pid" 2>/dev/null; then
             # Validate that PID belongs to analytics_monitor process
             local cmd
             cmd=$(ps -p "$pid" -o args= 2>/dev/null) || cmd=""
             if [[ "$cmd" == *"analytics_dashboard.py"* ]] || [[ "$cmd" == *"analytics_monitor"* ]]; then
-                kill -TERM $pid
+                kill -TERM "$pid"
                 sleep 2
-                if kill -0 $pid 2>/dev/null; then
-                    kill -KILL $pid
+                if kill -0 "$pid" 2>/dev/null; then
+                    kill -KILL "$pid"
                 fi
                 rm -f "$PID_DIR/analytics_monitor.pid"
                 info "[OK] Analytics monitor stopped"
