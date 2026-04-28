@@ -1078,12 +1078,14 @@ async def api_status() -> JSONResponse:
 
 @app.get("/api/actions")
 async def api_actions() -> JSONResponse:
-    return JSONResponse({"actions": list_actions(), "history": read_action_events(8)})
+    history = await run_in_threadpool(read_action_events, 8)
+    return JSONResponse({"actions": list_actions(), "history": history})
 
 
 @app.get("/api/actions/history")
 async def api_actions_history() -> JSONResponse:
-    return JSONResponse({"events": read_action_events(50)})
+    events = await run_in_threadpool(read_action_events, 50)
+    return JSONResponse({"events": events})
 
 
 @app.post("/api/actions/{action_id}")
