@@ -15,6 +15,10 @@ HERO_BRAIN_ROOT="${HERO_BRAIN_ROOT:-$HOME/brain}"
 HERO_HERMES_CONFIG="${HERO_HERMES_CONFIG:-$HOME/.hermes/config.yaml}"
 HERO_TELEGRAM_CANON="${HERO_TELEGRAM_CANON:-$HOME/wiki/queries/grok420system.md}"
 HERO_DASHBOARD_PORT="${HERO_DASHBOARD_PORT:-${PORT:-8080}}"
+if ! [[ "$HERO_DASHBOARD_PORT" =~ ^[0-9]+$ ]]; then
+    echo -e "\033[1;33m[WARN]\033[0m HERO_DASHBOARD_PORT='$HERO_DASHBOARD_PORT' is not numeric; falling back to 8080"
+    HERO_DASHBOARD_PORT=8080
+fi
 
 # Colors
 RED='\033[0;31m'
