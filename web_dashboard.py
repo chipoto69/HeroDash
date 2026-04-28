@@ -10,6 +10,7 @@ import re
 import shutil
 import socket
 import subprocess
+import time
 from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +19,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-from fastapi import FastAPI, Request as FastAPIRequest
+from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -36,6 +37,8 @@ ROOT = Path(__file__).resolve().parent
 TEMPLATES_DIR = ROOT / "web_templates"
 HERO_HOME = Path.home() / ".hero_core"
 HERO_CACHE = HERO_HOME / "cache"
+HERO_LOGS = HERO_HOME / "logs"
+HERO_ACTION_LOG = HERO_HOME / "actions.jsonl"
 HERMES_HOME = Path.home() / ".hermes"
 
 
@@ -64,8 +67,50 @@ MAIN_HERMES_CONFIG = env_path("HERO_HERMES_CONFIG", HERMES_HOME / "config.yaml")
 PORT_WEBAPI = env_int("HERO_WEBAPI_PORT", 8642)
 PORT_WORKSPACE = env_int("HERO_WORKSPACE_PORT", 3011)
 DROID_BRIDGE_PORT = env_int("HERO_DROID_BRIDGE_PORT", 8645)
+DASHBOARD_PORT = env_int("HERO_DASHBOARD_PORT", env_int("PORT", 8080))
 FACTORY_SETTINGS_PATH = env_path("HERO_FACTORY_SETTINGS", Path.home() / ".factory" / "settings.json")
 CARD_ORDER = ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"]
+ACTION_REGISTRY: OrderedDict[str, dict[str, Any]] = OrderedDict(
+    {
+        "refresh_status": {
+            "label": "Refresh Status",
+            "description": "Re-run all local probes and return the current subsystem snapshot.",
+            "kind": "internal",
+            "tone": "neutral",
+        },
+        "compile_dashboard": {
+            "label": "Compile Dashboard",
+            "description": "Parse the FastAPI dashboard and config modules with Python bytecode compilation.",
+            "kind": "command",
+            "args": ["python3", "-m", "py_compile", "web_dashboard.py", "config.py"],
+            "timeout": 25,
+            "tone": "healthy",
+        },
+        "run_reboot_tests": {
+            "label": "Run Reboot Tests",
+            "description": "Execute the focused Hero reboot dashboard pytest suite.",
+            "kind": "command",
+            "args": ["python3", "-m", "pytest", "-q", "tests/test_web_dashboard_reboot.py"],
+            "timeout": 90,
+            "tone": "healthy",
+        },
+        "launcher_status": {
+            "label": "Launcher Status",
+            "description": "Ask the launcher script whether the background dashboard process is running.",
+            "kind": "command",
+            "args": ["bash", "launch_web_dashboard.sh", "status"],
+            "timeout": 20,
+            "tone": "neutral",
+        },
+        "tail_logs": {
+            "label": "Tail Logs",
+            "description": "Read recent dashboard logs from ~/.hero_core/logs without spawning a shell.",
+            "kind": "internal",
+            "tone": "stale",
+        },
+    }
+)
+SKILL_CACHE: dict[str, Any] = {"timestamp": 0.0, "items": []}
 FRESHNESS_THRESHOLDS = {
     "hermes": 60,
     "droids": 60,
@@ -103,6 +148,26 @@ def sanitize_url(url: str | None) -> str | None:
     if parts.port:
         netloc = f"{host}:{parts.port}"
     return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
+def redact_text(value: str | None, limit: int = 5000) -> str:
+    if not value:
+        return ""
+    text = value[:limit]
+    text = re.sub(r"https?://[^:\s/@]+:[^@\s/]+@", "https://[redacted]@", text)
+    text = re.sub(r"(?i)(bearer|basic)\s+[A-Za-z0-9._~+/=-]{12,}", r"\1 [redacted]", text)
+    text = re.sub(r"(?i)(api[_-]?key|token|password|secret|authorization)(\s*[=:]\s*)[^\s,;]+", r"\1\2[redacted]", text)
+    text = re.sub(r"(?i)([?&](?:token|key|secret|password|api_key)=)[^&\s]+", r"\1[redacted]", text)
+    text = re.sub(r"\b[A-Za-z0-9_/-]{36,}\b", "[redacted-long-token]", text)
+    return text
+
+
+def preview_lines(value: str | None, max_lines: int = 80, max_chars: int = 5000) -> str:
+    redacted = redact_text(value, limit=max_chars)
+    lines = redacted.splitlines()
+    if len(lines) > max_lines:
+        lines = lines[-max_lines:]
+    return "\n".join(lines)
 
 
 def try_load_yaml(path: Path) -> dict[str, Any]:
@@ -174,6 +239,127 @@ def run_command(args: list[str], timeout: float = 2.0) -> tuple[int, str, str]:
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         return 127, "", str(exc)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+
+def action_public_payload(action_id: str, spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": action_id,
+        "label": spec["label"],
+        "description": spec["description"],
+        "kind": spec["kind"],
+        "tone": spec.get("tone", "neutral"),
+        "timeout": spec.get("timeout"),
+    }
+
+
+def list_actions() -> list[dict[str, Any]]:
+    return [action_public_payload(action_id, spec) for action_id, spec in ACTION_REGISTRY.items()]
+
+
+def append_action_event(event: dict[str, Any]) -> None:
+    HERO_HOME.mkdir(parents=True, exist_ok=True)
+    with HERO_ACTION_LOG.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
+def read_action_events(limit: int = 20) -> list[dict[str, Any]]:
+    if not HERO_ACTION_LOG.exists():
+        return []
+    lines = HERO_ACTION_LOG.read_text(encoding="utf-8", errors="replace").splitlines()
+    events: list[dict[str, Any]] = []
+    for line in lines[-limit:]:
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            events.append(parsed)
+    return events
+
+
+def tail_dashboard_logs(max_lines: int = 80) -> tuple[str, str]:
+    candidates = [
+        HERO_LOGS / "web_dashboard.log",
+        HERO_LOGS / "herodash-main-live.log",
+    ]
+    chunks = []
+    for path in candidates:
+        if not path.exists():
+            continue
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:]
+        chunks.append(f"==> {path}\n" + "\n".join(lines))
+    if not chunks:
+        return "", "No dashboard logs found in ~/.hero_core/logs"
+    return "\n\n".join(chunks), ""
+
+
+def execute_action(action_id: str) -> dict[str, Any]:
+    spec = ACTION_REGISTRY.get(action_id)
+    if not spec:
+        raise KeyError(action_id)
+
+    started = time.monotonic()
+    started_at = iso_now()
+    status = "succeeded"
+    exit_code = 0
+    stdout = ""
+    stderr = ""
+
+    try:
+        if action_id == "refresh_status":
+            current = runtime.snapshot()
+            stdout = json.dumps(
+                {
+                    "timestamp": current["overview"]["timestamp"],
+                    "cards": {name: current["cards"][name]["status"] for name in current["card_order"]},
+                },
+                indent=2,
+            )
+        elif action_id == "tail_logs":
+            stdout, stderr = tail_dashboard_logs()
+            exit_code = 0 if stdout else 1
+            status = "succeeded" if stdout else "failed"
+        else:
+            result = subprocess.run(
+                spec["args"],
+                cwd=str(ROOT),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=spec.get("timeout", 30),
+            )
+            exit_code = result.returncode
+            stdout = result.stdout or ""
+            stderr = result.stderr or ""
+            status = "succeeded" if exit_code == 0 else "failed"
+    except subprocess.TimeoutExpired as exc:
+        status = "failed"
+        exit_code = 124
+        stdout = exc.stdout.decode("utf-8", errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        stderr = f"Action timed out after {spec.get('timeout', 30)}s"
+    except Exception as exc:  # pragma: no cover - defensive
+        status = "failed"
+        exit_code = 1
+        stderr = f"{type(exc).__name__}: {exc}"
+
+    completed_at = iso_now()
+    duration_ms = int((time.monotonic() - started) * 1000)
+    event = {
+        "id": f"action-{int(time.time() * 1000)}-{action_id}",
+        "action_id": action_id,
+        "label": spec["label"],
+        "status": status,
+        "exit_code": exit_code,
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "duration_ms": duration_ms,
+        "cwd": str(ROOT),
+        "command": spec.get("args", [action_id]),
+        "stdout_preview": preview_lines(stdout),
+        "stderr_preview": preview_lines(stderr),
+    }
+    append_action_event(event)
+    return event
 
 
 def port_open(port: int, host: str = "127.0.0.1", timeout: float = 0.35) -> bool:
@@ -669,6 +855,206 @@ class DashboardRuntime:
         }
 
 
+def status_weight(status: str) -> int:
+    return {"healthy": 0, "succeeded": 0, "stale": 1, "degraded": 2, "failed": 2, "down": 3}.get(status, 2)
+
+
+def discover_skill_inventory(limit: int = 60) -> list[dict[str, Any]]:
+    now = time.monotonic()
+    if SKILL_CACHE["timestamp"] and now - SKILL_CACHE["timestamp"] < 300:
+        return SKILL_CACHE["items"][:limit]
+
+    inventory: list[dict[str, Any]] = []
+    roots = [Path.home() / ".agents" / "skills", Path.home() / ".codex" / "skills"]
+    for root in roots:
+        if not root.exists():
+            continue
+        queue: list[tuple[Path, int]] = [(root, 0)]
+        while queue and len(inventory) < limit:
+            directory, depth = queue.pop(0)
+            skill_file = directory / "SKILL.md"
+            if not skill_file.exists():
+                if depth >= 4:
+                    continue
+                try:
+                    children = sorted(
+                        child
+                        for child in directory.iterdir()
+                        if child.is_dir() and child.name not in {".git", "__pycache__", "node_modules", ".venv", "cache"}
+                    )
+                except OSError:
+                    children = []
+                queue.extend((child, depth + 1) for child in children)
+                continue
+            try:
+                rel = skill_file.relative_to(root).parent.as_posix()
+                text = skill_file.read_text(encoding="utf-8", errors="replace")[:900]
+            except OSError:
+                continue
+            name_match = re.search(r"^name:\s*(.+)$", text, flags=re.MULTILINE)
+            desc_match = re.search(r"^description:\s*(.+)$", text, flags=re.MULTILINE)
+            description = desc_match.group(1).strip() if desc_match else "local skill"
+            if description == "|":
+                description = "local skill"
+            inventory.append(
+                {
+                    "name": (name_match.group(1).strip() if name_match else rel.split("/")[-1]),
+                    "namespace": root.parent.name,
+                    "path": str(skill_file),
+                    "description": description,
+                    "timestamp": file_timestamp(skill_file),
+                }
+            )
+            if depth < 4:
+                try:
+                    children = sorted(
+                        child
+                        for child in directory.iterdir()
+                        if child.is_dir() and child.name not in {".git", "__pycache__", "node_modules", ".venv", "cache"}
+                    )
+                except OSError:
+                    children = []
+                queue.extend((child, depth + 1) for child in children)
+    SKILL_CACHE["timestamp"] = now
+    SKILL_CACHE["items"] = inventory
+    return inventory
+
+
+def cron_gate_snapshot() -> list[dict[str, Any]]:
+    candidates = [
+        HERMES_HOME / "cron.yaml",
+        HERMES_HOME / "cron.yml",
+        HERMES_HOME / "crontab.yaml",
+        HERO_HOME / "cron.yaml",
+    ]
+    gates: list[dict[str, Any]] = []
+    for path in candidates:
+        gates.append(
+            {
+                "name": path.name,
+                "path": str(path),
+                "status": "configured" if path.exists() else "missing",
+                "timestamp": file_timestamp(path),
+            }
+        )
+    return gates
+
+
+def build_labyrinth(snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+    current = snapshot or runtime.snapshot()
+    now = current["overview"]["timestamp"]
+    action_events = read_action_events(25)
+
+    journeys: list[dict[str, Any]] = [
+        {
+            "id": "journey-current-dashboard",
+            "title": "Hero dashboard live probe",
+            "source": "dashboard",
+            "status": current["cards"]["alerts"]["status"],
+            "started_at": now,
+            "updated_at": now,
+            "summary": current["cards"]["alerts"]["details"]["summary"],
+        }
+    ]
+    crossings: list[dict[str, Any]] = []
+    guideposts: list[dict[str, Any]] = []
+
+    for index, name in enumerate(current["card_order"]):
+        card = current["cards"][name]
+        crossing = {
+            "id": f"crossing-probe-{name}",
+            "journey_id": "journey-current-dashboard",
+            "thread": "main" if name != "alerts" else "thresholds",
+            "type": "probe",
+            "label": name,
+            "status": card["status"],
+            "timestamp": card["timestamp"],
+            "duration_ms": None,
+            "summary": card.get("last_error") or card.get("source"),
+            "evidence": {
+                "source": card.get("source"),
+                "freshness_seconds": card.get("freshness_seconds"),
+                "details": card.get("details", {}),
+            },
+            "weight": status_weight(card["status"]),
+            "order": index,
+        }
+        crossings.append(crossing)
+        if card["status"] != "healthy":
+            guideposts.append(
+                {
+                    "id": f"guidepost-{name}",
+                    "severity": card["status"],
+                    "title": f"{name} needs attention",
+                    "summary": card.get("last_error") or f"{name} is {card['status']}",
+                    "evidence_crossing_id": crossing["id"],
+                    "timestamp": card["timestamp"],
+                }
+            )
+
+    for index, event in enumerate(reversed(action_events)):
+        journey_id = f"journey-{event['id']}"
+        journeys.append(
+            {
+                "id": journey_id,
+                "title": event.get("label") or event.get("action_id"),
+                "source": "operator-action",
+                "status": event.get("status", "unknown"),
+                "started_at": event.get("started_at"),
+                "updated_at": event.get("completed_at"),
+                "summary": f"exit {event.get('exit_code')} in {event.get('duration_ms')}ms",
+            }
+        )
+        crossings.append(
+            {
+                "id": f"crossing-{event['id']}",
+                "journey_id": journey_id,
+                "thread": "tools",
+                "type": "action",
+                "label": event.get("label") or event.get("action_id"),
+                "status": event.get("status", "unknown"),
+                "timestamp": event.get("completed_at"),
+                "duration_ms": event.get("duration_ms"),
+                "summary": event.get("stderr_preview") or event.get("stdout_preview") or "action completed",
+                "evidence": {
+                    "command": event.get("command"),
+                    "stdout_preview": event.get("stdout_preview"),
+                    "stderr_preview": event.get("stderr_preview"),
+                    "cwd": event.get("cwd"),
+                },
+                "weight": status_weight(event.get("status", "unknown")),
+                "order": len(crossings) + index,
+            }
+        )
+        if event.get("status") != "succeeded":
+            guideposts.append(
+                {
+                    "id": f"guidepost-{event['id']}",
+                    "severity": "degraded",
+                    "title": f"{event.get('label')} failed",
+                    "summary": event.get("stderr_preview") or "operator action failed",
+                    "evidence_crossing_id": f"crossing-{event['id']}",
+                    "timestamp": event.get("completed_at"),
+                }
+            )
+
+    crossings.sort(key=lambda item: (item.get("timestamp") or "", item.get("order") or 0))
+    return {
+        "generated_at": now,
+        "source": "hero-dashboard-local-runtime",
+        "journeys": journeys[:30],
+        "crossings": crossings[-80:],
+        "guideposts": sorted(guideposts, key=lambda item: status_weight(item["severity"]), reverse=True)[:30],
+        "skills": discover_skill_inventory(),
+        "cron": cron_gate_snapshot(),
+        "actions": list_actions(),
+        "reports": {
+            "json": "/api/labyrinth",
+            "action_history": "/api/actions/history",
+        },
+    }
+
+
 app = FastAPI(title="Hero Reboot Dashboard", description="Honest operator surface for Hermes, Telegram, GBrain, and WORKFLOWS")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 runtime = DashboardRuntime()
@@ -690,6 +1076,33 @@ async def api_status() -> JSONResponse:
     return JSONResponse(snapshot)
 
 
+@app.get("/api/actions")
+async def api_actions() -> JSONResponse:
+    history = await run_in_threadpool(read_action_events, 8)
+    return JSONResponse({"actions": list_actions(), "history": history})
+
+
+@app.get("/api/actions/history")
+async def api_actions_history() -> JSONResponse:
+    events = await run_in_threadpool(read_action_events, 50)
+    return JSONResponse({"events": events})
+
+
+@app.post("/api/actions/{action_id}")
+async def api_run_action(action_id: str) -> JSONResponse:
+    if action_id not in ACTION_REGISTRY:
+        raise HTTPException(status_code=404, detail=f"Unknown action: {action_id}")
+    event = await run_in_threadpool(execute_action, action_id)
+    status_code = 200 if event["status"] == "succeeded" else 500
+    return JSONResponse(event, status_code=status_code)
+
+
+@app.get("/api/labyrinth")
+async def api_labyrinth() -> JSONResponse:
+    payload = await run_in_threadpool(build_labyrinth)
+    return JSONResponse(payload)
+
+
 @app.get("/api/healthz")
 async def healthz() -> JSONResponse:
     # Return cheap process-alive response without expensive snapshot
@@ -702,6 +1115,16 @@ async def healthz() -> JSONResponse:
         },
         status_code=200,
     )
+
+
+@app.get("/health")
+async def health_alias() -> JSONResponse:
+    return await healthz()
+
+
+@app.get("/api/version")
+async def api_version() -> JSONResponse:
+    return JSONResponse({"version": "hero-reboot-v2", "dashboard_port": DASHBOARD_PORT, "timestamp": iso_now()})
 
 
 @app.get("/api/readiness")
@@ -720,8 +1143,8 @@ async def readiness() -> JSONResponse:
 
 
 def main() -> None:
-    logger.info("Starting Hero reboot dashboard on http://127.0.0.1:8080")
-    uvicorn.run(app, host="127.0.0.1", port=8080, log_level="info")
+    logger.info("Starting Hero reboot dashboard on http://127.0.0.1:%s", DASHBOARD_PORT)
+    uvicorn.run(app, host="127.0.0.1", port=DASHBOARD_PORT, log_level="info")
 
 
 if __name__ == "__main__":

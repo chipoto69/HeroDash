@@ -14,6 +14,11 @@ HERO_WORKFLOWS_ROOT="${HERO_WORKFLOWS_ROOT:-$HOME/ORGANIZED/ACTIVE_PROJECTS/ARSE
 HERO_BRAIN_ROOT="${HERO_BRAIN_ROOT:-$HOME/brain}"
 HERO_HERMES_CONFIG="${HERO_HERMES_CONFIG:-$HOME/.hermes/config.yaml}"
 HERO_TELEGRAM_CANON="${HERO_TELEGRAM_CANON:-$HOME/wiki/queries/grok420system.md}"
+HERO_DASHBOARD_PORT="${HERO_DASHBOARD_PORT:-${PORT:-8080}}"
+if ! [[ "$HERO_DASHBOARD_PORT" =~ ^[0-9]+$ ]]; then
+    echo -e "\033[1;33m[WARN]\033[0m HERO_DASHBOARD_PORT='$HERO_DASHBOARD_PORT' is not numeric; falling back to 8080"
+    HERO_DASHBOARD_PORT=8080
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -79,7 +84,7 @@ check_dependencies() {
         echo "  pip install ${missing_packages[*]}"
         echo ""
         echo "Or install all web dashboard dependencies:"
-        echo "  pip install fastapi uvicorn jinja2 pyyaml>=6.0.0"
+        echo "  pip install fastapi uvicorn jinja2 'pyyaml>=6.0.0'"
         exit 1
     fi
     
@@ -147,11 +152,11 @@ start_web_dashboard() {
     
     # Set environment variables
     export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
-    export HERO_WORKFLOWS_ROOT HERO_BRAIN_ROOT HERO_HERMES_CONFIG HERO_TELEGRAM_CANON
+    export HERO_WORKFLOWS_ROOT HERO_BRAIN_ROOT HERO_HERMES_CONFIG HERO_TELEGRAM_CANON HERO_DASHBOARD_PORT
     
-    # Check if port 8080 is available
-    if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        error "Port 8080 is already in use"
+    # Check if dashboard port is available
+    if lsof -Pi :"$HERO_DASHBOARD_PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+        error "Port $HERO_DASHBOARD_PORT is already in use"
         echo "Stop the existing service or use a different port"
         return 1
     fi
@@ -170,10 +175,12 @@ start_web_dashboard() {
         
         echo ""
         echo -e "${CYAN}Web Dashboard URLs:${NC}"
-        echo "  Main Dashboard: http://localhost:8080"
-        echo "  Status JSON:    http://localhost:8080/api/status"
-        echo "  Health Check:   http://localhost:8080/api/healthz"
-        echo "  Readiness:      http://localhost:8080/api/readiness"
+        echo "  Main Dashboard: http://localhost:$HERO_DASHBOARD_PORT"
+        echo "  Status JSON:    http://localhost:$HERO_DASHBOARD_PORT/api/status"
+        echo "  Labyrinth JSON: http://localhost:$HERO_DASHBOARD_PORT/api/labyrinth"
+        echo "  Actions JSON:   http://localhost:$HERO_DASHBOARD_PORT/api/actions"
+        echo "  Health Check:   http://localhost:$HERO_DASHBOARD_PORT/api/healthz"
+        echo "  Readiness:      http://localhost:$HERO_DASHBOARD_PORT/api/readiness"
         echo ""
         echo -e "${GREEN}Dashboard is running with honest subsystem probes${NC}"
         echo -e "${YELLOW}Press Ctrl+C to stop or use './launch_web_dashboard.sh stop'${NC}"
@@ -232,7 +239,7 @@ show_status() {
         fi
         if kill -0 "$pid" 2>/dev/null && pid_matches_dashboard "$pid"; then
             echo "  [OK] Running (PID: $pid)"
-            echo "  URL: http://localhost:8080"
+            echo "  URL: http://localhost:$HERO_DASHBOARD_PORT"
 
             # Show recent log entries
             if [[ -f "$LOG_DIR/web_dashboard.log" ]]; then
@@ -359,7 +366,7 @@ show_logs() {
 open_browser() {
     if command -v open &> /dev/null; then
         sleep 2
-        open "http://localhost:8080"
+        open "http://localhost:$HERO_DASHBOARD_PORT"
         info "Opening dashboard in browser"
     fi
 }
