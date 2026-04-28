@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Launch Hero Web Dashboard
-# Comprehensive web interface for Hero agent monitoring and analytics
+# Honest operator interface for Hermes agents, Factory Droids, memory, workflows, and alerts
 
 set -euo pipefail
 
@@ -74,7 +74,7 @@ check_dependencies() {
         echo "  pip install ${missing_packages[*]}"
         echo ""
         echo "Or install all web dashboard dependencies:"
-        echo "  pip install fastapi uvicorn jinja2 websockets"
+        echo "  pip install fastapi uvicorn jinja2"
         exit 1
     fi
     
@@ -96,27 +96,33 @@ check_agent_status() {
     local brain_root="$HERO_BRAIN_ROOT"
 
     if [[ -f "$hermes_config" ]]; then
-        info "✅ Hermes config present"
+        info "[OK] Hermes config present"
     else
-        echo -e "${YELLOW}⚠️  Hermes config missing${NC}"
+        echo -e "${YELLOW}[WARN] Hermes config missing${NC}"
     fi
 
     if [[ -d "$workflows_root" ]]; then
-        info "✅ WORKFLOWS repo present"
+        info "[OK] WORKFLOWS repo present"
     else
-        echo -e "${YELLOW}⚠️  WORKFLOWS repo missing${NC}"
+        echo -e "${YELLOW}[WARN] WORKFLOWS repo missing${NC}"
     fi
 
     if [[ -d "$brain_root" ]]; then
-        info "✅ Brain repo present"
+        info "[OK] Brain repo present"
     else
-        echo -e "${YELLOW}⚠️  Brain repo missing${NC}"
+        echo -e "${YELLOW}[WARN] Brain repo missing${NC}"
     fi
 
     if pgrep -fal 'hermes' >/dev/null 2>&1; then
-        info "✅ Hermes process activity detected"
+        info "[OK] Hermes process activity detected"
     else
-        echo -e "${YELLOW}⚠️  No Hermes process detected${NC}"
+        echo -e "${YELLOW}[WARN] No Hermes process detected${NC}"
+    fi
+
+    if command -v droid >/dev/null 2>&1 || [[ -x "$HOME/.local/bin/droid" ]]; then
+        info "[OK] Droid binary present"
+    else
+        echo -e "${YELLOW}[WARN] Droid binary missing${NC}"
     fi
 }
 
@@ -151,10 +157,10 @@ start_web_dashboard() {
     sleep 3
     
     if kill -0 $dashboard_pid 2>/dev/null; then
-        info "✅ Web dashboard started successfully (PID: $dashboard_pid)"
+        info "[OK] Web dashboard started successfully (PID: $dashboard_pid)"
         
         echo ""
-        echo -e "${CYAN}🌐 Web Dashboard URLs:${NC}"
+        echo -e "${CYAN}Web Dashboard URLs:${NC}"
         echo "  Main Dashboard: http://localhost:8080"
         echo "  Status JSON:    http://localhost:8080/api/status"
         echo "  Health Check:   http://localhost:8080/api/healthz"
@@ -184,7 +190,7 @@ stop_web_dashboard() {
                 kill -KILL $pid
             fi
             rm -f "$PID_DIR/web_dashboard.pid"
-            info "✅ Web dashboard stopped"
+            info "[OK] Web dashboard stopped"
         elif kill -0 $pid 2>/dev/null; then
             error "PID file points to a non-dashboard process ($pid); refusing to kill it"
             return 1
@@ -204,8 +210,8 @@ show_status() {
     if [[ -f "$PID_DIR/web_dashboard.pid" ]]; then
         local pid=$(cat "$PID_DIR/web_dashboard.pid")
         if kill -0 $pid 2>/dev/null && pid_matches_dashboard "$pid"; then
-            echo "  ✅ Running (PID: $pid)"
-            echo "  🌐 URL: http://localhost:8080"
+            echo "  [OK] Running (PID: $pid)"
+            echo "  URL: http://localhost:8080"
             
             # Show recent log entries
             if [[ -f "$LOG_DIR/web_dashboard.log" ]]; then
@@ -214,13 +220,13 @@ show_status() {
                 tail -5 "$LOG_DIR/web_dashboard.log" | sed 's/^/    /'
             fi
         elif kill -0 $pid 2>/dev/null; then
-            echo "  ⚠️ PID file points to a different live process ($pid)"
+            echo "  [WARN] PID file points to a different live process ($pid)"
         else
-            echo "  ❌ Not running (stale PID file)"
+            echo "  [DOWN] Not running (stale PID file)"
             rm -f "$PID_DIR/web_dashboard.pid"
         fi
     else
-        echo "  ❌ Not running"
+        echo "  [DOWN] Not running"
     fi
 }
 
@@ -242,7 +248,7 @@ start_analytics() {
     
     sleep 2
     if kill -0 $analytics_pid 2>/dev/null; then
-        info "✅ Analytics monitor started (PID: $analytics_pid)"
+        info "[OK] Analytics monitor started (PID: $analytics_pid)"
     else
         error "Failed to start analytics monitor"
         rm -f "$PID_DIR/analytics_monitor.pid"
@@ -263,7 +269,7 @@ stop_analytics() {
             fi
         fi
         rm -f "$PID_DIR/analytics_monitor.pid"
-        info "✅ Analytics monitor stopped"
+        info "[OK] Analytics monitor stopped"
     fi
 }
 
@@ -305,7 +311,7 @@ open_browser() {
     if command -v open &> /dev/null; then
         sleep 2
         open "http://localhost:8080"
-        info "🌐 Opening dashboard in browser"
+        info "Opening dashboard in browser"
     fi
 }
 

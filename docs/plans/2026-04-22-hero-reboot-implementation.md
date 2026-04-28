@@ -2,7 +2,7 @@
 
 > For Hermes: implement the first honest Hero dashboard slice in the clean `hero-reboot-phase0` worktree. Do not preserve fake NATS theater.
 
-Goal: replace the old analytics/fake-agent dashboard with a truthful five-card operator surface for Hermes, Telegram, GBrain, WORKFLOWS, and Alerts.
+Goal: replace the old analytics/fake-agent dashboard with a truthful operator surface for Hermes, Factory Droids, Telegram, GBrain, WORKFLOWS, and Alerts.
 
 Architecture: keep `web_dashboard.py` as the canonical entrypoint on port 8080, but rewrite it around a small adapter layer and a normalized runtime contract. Render one simple HTML dashboard via Jinja, poll `/api/status`, and expose stale/degraded/down states honestly.
 
@@ -47,15 +47,16 @@ Verification:
 - `python3 -m py_compile web_dashboard.py`
 - `pytest -q tests/test_web_dashboard_reboot.py`
 
-## Task 3: Build the new five-card UI
+## Task 3: Build the new canonical-card UI
 Objective: replace missing/legacy template assumptions with a simple real operator surface.
 
 Files:
 - Create: `web_templates/dashboard.html`
 
 Implementation targets:
-- Render only five cards:
+- Render only the canonical operator cards:
   - Hermes
+  - Factory Droids
   - Telegram
   - GBrain
   - WORKFLOWS

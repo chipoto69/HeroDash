@@ -8,13 +8,14 @@ Not comprehensive. Honest.
 
 ## Scope
 
-Replace the current mono dashboard data model with five cards only:
+Replace the current dashboard data model with the operator-critical cards only:
 
 1. Hermes
-2. Telegram
-3. GBrain
-4. WORKFLOWS
-5. Alerts
+2. Factory Droids
+3. Telegram
+4. GBrain
+5. WORKFLOWS
+6. Alerts
 
 ## Why this slice
 
@@ -29,6 +30,13 @@ Checks:
 - active profile count if retrievable
 - latest session/update timestamp
 - last known error
+
+### Factory Droids adapter
+Checks:
+- Droid binary/version
+- Factory custom model entries that route to Hermes
+- local Hermes bridge port
+- Droid/Factory process evidence
 
 ### Telegram adapter
 Checks:
@@ -77,12 +85,13 @@ Every card must show:
 
 1. add adapter base contract
 2. add Hermes adapter
-3. add GBrain adapter
-4. add WORKFLOWS adapter
-5. add Telegram adapter
-6. add Alerts aggregator
-7. rewire `/api/status`
-8. trim `dashboard_mono.html` to five cards
+3. add Factory Droids adapter
+4. add GBrain adapter
+5. add WORKFLOWS adapter
+6. add Telegram adapter
+7. add Alerts aggregator
+8. rewire `/api/status`
+9. trim `dashboard.html` to the canonical operator cards
 
 ## Done means
 

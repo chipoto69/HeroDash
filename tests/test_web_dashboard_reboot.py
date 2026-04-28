@@ -7,7 +7,18 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from web_dashboard import DashboardRuntime, app, build_alerts, env_int, env_path, make_probe, parse_topic_ownership, sanitize_url
+from web_dashboard import (
+    DashboardRuntime,
+    app,
+    build_alerts,
+    env_int,
+    env_path,
+    make_probe,
+    parse_topic_ownership,
+    sanitize_url,
+    summarize_factory_models,
+    redact_process_line,
+)
 
 
 def test_parse_topic_ownership_extracts_thread_ids():
@@ -68,6 +79,7 @@ def test_healthz_reports_dashboard_alive_even_if_dependencies_degraded(monkeypat
         "overview": {"timestamp": "2026-04-22T00:00:00Z"},
         "cards": {
             "hermes": {"status": "healthy"},
+            "droids": {"status": "healthy"},
             "telegram": {"status": "degraded"},
             "gbrain": {"status": "healthy"},
             "workflows": {"status": "healthy"},
@@ -116,3 +128,59 @@ def test_probe_gbrain_marks_http_500_as_degraded(monkeypatch):
     assert probe["status"] == "degraded"
     assert probe["details"]["http_status"] == 500
     assert "HTTP 500" in probe["last_error"]
+
+
+def test_summarize_factory_models_filters_to_hermes_without_secrets():
+    models = summarize_factory_models(
+        {
+            "customModels": [
+                {
+                    "id": "custom:Hermes-Codex-[Local]-0",
+                    "displayName": "Hermes -> Codex [Local]",
+                    "model": "factory-codex",
+                    "baseUrl": "http://user:secret@127.0.0.1:8645/v1?token=secret",
+                    "apiKey": "do-not-return",
+                },
+                {
+                    "id": "custom:Other-0",
+                    "displayName": "Other",
+                    "model": "other",
+                    "baseUrl": "https://example.com/v1",
+                },
+            ]
+        }
+    )
+
+    assert len(models) == 1
+    assert models[0]["id"] == "custom:Hermes-Codex-[Local]-0"
+    assert models[0]["base_url"] == "http://127.0.0.1:8645/v1"
+    assert "apiKey" not in models[0]
+
+
+def test_redact_process_line_removes_arguments_and_env_values():
+    redacted = redact_process_line("1234 /usr/bin/droid exec --api-key secret --url http://token@example.com")
+
+    assert redacted == "1234 droid-exec+droid"
+    assert "secret" not in redacted
+    assert "example.com" not in redacted
+
+
+def test_probe_droids_degraded_when_bridge_missing(monkeypatch, tmp_path):
+    runtime = DashboardRuntime()
+    droid_bin = tmp_path / "droid"
+    droid_bin.write_text("#!/bin/sh\n")
+
+    monkeypatch.setenv("HERO_DROID_BIN", str(droid_bin))
+    monkeypatch.setattr("web_dashboard.FACTORY_SETTINGS_PATH", tmp_path / "settings.json")
+    monkeypatch.setattr("web_dashboard.load_factory_settings", lambda path=None: {"customModels": []})
+    monkeypatch.setattr("web_dashboard.run_command", lambda args, timeout=2.0: (0, "droid 0.105.1", ""))
+    monkeypatch.setattr("web_dashboard.port_open", lambda port, host="127.0.0.1", timeout=0.35: False)
+    monkeypatch.setattr("web_dashboard.run_pgrep", lambda pattern: [])
+
+    probe = runtime.probe_droids()
+
+    assert probe["status"] == "degraded"
+    assert probe["details"]["droid_binary_exists"] is True
+    assert "droid_processes" not in probe["details"]
+    assert "factory_processes" not in probe["details"]
+    assert "Hermes Factory model" in probe["last_error"]

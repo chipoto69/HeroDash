@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hero reboot dashboard — honest five-card operator surface."""
+"""Hero reboot dashboard — honest operator surface."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import socket
 import subprocess
 from collections import OrderedDict
@@ -61,9 +62,12 @@ WIKI_GROK_SYSTEM = env_path("HERO_TELEGRAM_CANON", Path.home() / "wiki/queries/g
 MAIN_HERMES_CONFIG = env_path("HERO_HERMES_CONFIG", HERMES_HOME / "config.yaml")
 PORT_WEBAPI = env_int("HERO_WEBAPI_PORT", 8642)
 PORT_WORKSPACE = env_int("HERO_WORKSPACE_PORT", 3011)
-CARD_ORDER = ["hermes", "telegram", "gbrain", "workflows", "alerts"]
+DROID_BRIDGE_PORT = env_int("HERO_DROID_BRIDGE_PORT", 8645)
+FACTORY_SETTINGS_PATH = env_path("HERO_FACTORY_SETTINGS", Path.home() / ".factory" / "settings.json")
+CARD_ORDER = ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"]
 FRESHNESS_THRESHOLDS = {
     "hermes": 60,
+    "droids": 60,
     "telegram": 60 * 60 * 24 * 7,
     "gbrain": 60 * 60 * 24,
     "workflows": 60 * 60 * 24 * 14,
@@ -124,6 +128,51 @@ def run_pgrep(pattern: str) -> list[str]:
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     noise_markers = ("hermes-snap", "hermes-cwd", "pgrep -fal")
     return [line for line in lines if not any(marker in line for marker in noise_markers)]
+
+
+def redact_process_line(line: str) -> str:
+    """Return process evidence without exposing command arguments or env values."""
+    parts = line.split(maxsplit=1)
+    if not parts:
+        return "process"
+    pid = parts[0] if parts[0].isdigit() else "pid"
+    command = parts[1] if len(parts) > 1 else ""
+    lowered = command.lower()
+    labels = []
+    for needle, label in (
+        ("gateway run", "gateway"),
+        ("droid exec", "droid-exec"),
+        ("droid", "droid"),
+        ("factory", "factory"),
+        ("uvicorn", "uvicorn"),
+        ("python", "python"),
+        ("go run", "go"),
+        ("npm run", "npm"),
+    ):
+        if needle in lowered and label not in labels:
+            labels.append(label)
+    if not labels:
+        executable = command.split(maxsplit=1)[0] if command else "process"
+        labels.append(Path(executable).name or "process")
+    return f"{pid} {'+'.join(labels[:3])}"
+
+
+def redact_process_lines(lines: list[str], limit: int = 6) -> list[str]:
+    return [redact_process_line(line) for line in lines[:limit]]
+
+
+def run_command(args: list[str], timeout: float = 2.0) -> tuple[int, str, str]:
+    try:
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return 127, "", str(exc)
+    return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
 def port_open(port: int, host: str = "127.0.0.1", timeout: float = 0.35) -> bool:
@@ -222,6 +271,47 @@ def profile_summary(profile_name: str) -> dict[str, Any]:
         "home_thread_id": payload.get("TELEGRAM_HOME_THREAD_ID"),
         "timestamp": file_timestamp(config_path),
     }
+
+
+def load_factory_settings(path: Path = FACTORY_SETTINGS_PATH) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(path.read_text())
+        return loaded if isinstance(loaded, dict) else {}
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Failed to parse Factory settings %s: %s", path, exc)
+        return {}
+
+
+def summarize_factory_models(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_models = settings.get("customModels") or settings.get("custom_models") or []
+    if isinstance(raw_models, dict):
+        iterable = raw_models.values()
+    elif isinstance(raw_models, list):
+        iterable = raw_models
+    else:
+        iterable = []
+
+    models: list[dict[str, Any]] = []
+    for item in iterable:
+        if not isinstance(item, dict):
+            continue
+        model_id = item.get("id") or item.get("name") or item.get("displayName") or item.get("display_name")
+        display = item.get("displayName") or item.get("display_name") or item.get("name") or model_id
+        base_url = sanitize_url(item.get("baseUrl") or item.get("base_url") or item.get("apiBase") or item.get("api_base"))
+        model_name = item.get("model") or item.get("modelName") or item.get("model_name")
+        if not any("hermes" in str(value).lower() for value in (model_id, display, base_url, model_name)):
+            continue
+        models.append(
+            {
+                "id": model_id,
+                "display": display,
+                "model": model_name,
+                "base_url": base_url,
+            }
+        )
+    return models[:6]
 
 
 def make_probe(
@@ -328,12 +418,66 @@ class DashboardRuntime:
             "webapi_port_up": webapi_up,
             "workspace_ui_port_up": workspace_up,
             "tracked_profiles": available_profiles,
-            "sample_processes": process_lines[:6],
+            "process_evidence_count": len(process_lines),
         }
         return make_probe(
             name="hermes",
             status=status,
             source="local-process+ports",
+            details=details,
+            last_error=last_error,
+        )
+
+    def probe_droids(self) -> dict[str, Any]:
+        droid_binary = Path(os.getenv("HERO_DROID_BIN", "")) if os.getenv("HERO_DROID_BIN") else Path.home() / ".local" / "bin" / "droid"
+        resolved_binary = droid_binary if droid_binary.exists() else Path(shutil.which("droid") or droid_binary)
+        binary_exists = resolved_binary.exists()
+        version = None
+        if binary_exists:
+            _, stdout, stderr = run_command([str(resolved_binary), "--version"])
+            version = stdout or stderr or None
+
+        settings = load_factory_settings()
+        hermes_models = summarize_factory_models(settings)
+        bridge_up = port_open(DROID_BRIDGE_PORT)
+        droid_processes = run_pgrep("droid")
+        factory_processes = run_pgrep("Factory|factory")
+
+        if binary_exists and hermes_models and bridge_up:
+            status = "healthy"
+            last_error = None
+        elif binary_exists or hermes_models or bridge_up or droid_processes or factory_processes:
+            status = "degraded"
+            missing = []
+            if not binary_exists:
+                missing.append("droid binary")
+            if not hermes_models:
+                missing.append("Hermes Factory model")
+            if not bridge_up:
+                missing.append("local bridge port")
+            last_error = f"Droid surface is partial: missing {', '.join(missing)}" if missing else "Droid surface is partial"
+        else:
+            status = "down"
+            last_error = "No Droid, Factory, or Hermes bridge evidence found"
+
+        live_evidence = binary_exists or bridge_up or bool(droid_processes) or bool(factory_processes)
+        evidence_timestamp = iso_now() if live_evidence else file_timestamp(FACTORY_SETTINGS_PATH)
+        details = {
+            "droid_binary": str(resolved_binary),
+            "droid_binary_exists": binary_exists,
+            "droid_version": version,
+            "factory_settings": str(FACTORY_SETTINGS_PATH),
+            "factory_settings_present": FACTORY_SETTINGS_PATH.exists(),
+            "hermes_models": hermes_models,
+            "bridge_port": DROID_BRIDGE_PORT,
+            "bridge_port_up": bridge_up,
+            "process_activity_detected": bool(droid_processes or factory_processes),
+            "evidence_timestamp": evidence_timestamp,
+        }
+        return make_probe(
+            name="droids",
+            status=status,
+            source="factory-settings+droid-binary+local-bridge",
             details=details,
             last_error=last_error,
         )
@@ -491,6 +635,7 @@ class DashboardRuntime:
     def snapshot(self) -> dict[str, Any]:
         cards: OrderedDict[str, dict[str, Any]] = OrderedDict()
         cards["hermes"] = self.probe_hermes()
+        cards["droids"] = self.probe_droids()
         cards["telegram"] = self.probe_telegram()
         cards["gbrain"] = self.probe_gbrain()
         cards["workflows"] = self.probe_workflows()

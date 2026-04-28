@@ -2,8 +2,9 @@
 
 Hero is now an honest web operator surface for the current stack, not a fake swarm demo.
 
-It serves five cards only:
+It serves the operator-critical cards only:
 - Hermes
+- Factory Droids
 - Telegram
 - GBrain
 - WORKFLOWS
@@ -57,6 +58,8 @@ export HERO_TELEGRAM_CANON=~/wiki/queries/grok420system.md
 export HERO_WORKFLOWS_ROOT=~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS
 export HERO_WEBAPI_PORT=8642
 export HERO_WORKSPACE_PORT=3011
+export HERO_DROID_BRIDGE_PORT=8645
+export HERO_FACTORY_SETTINGS=~/.factory/settings.json
 ```
 
 Requirements:
@@ -64,10 +67,12 @@ Requirements:
 - `fastapi`
 - `uvicorn`
 - `jinja2`
-- optional: `PyYAML` for richer Hermes config parsing
+- `PyYAML`
 - optional but useful local assets:
   - `~/.hermes/config.yaml`
   - `~/.hermes/profiles/`
+  - `~/.factory/settings.json`
+  - `~/.local/bin/droid`
   - `~/brain`
   - `~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS`
   - `~/wiki/queries/grok420system.md`
@@ -106,12 +111,13 @@ Current contract shape:
   },
   "cards": {
     "hermes": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
+    "droids": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
     "telegram": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
     "gbrain": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
     "workflows": {"status": "healthy", "source": "...", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {}},
     "alerts": {"status": "healthy", "source": "hero-aggregator", "timestamp": "...", "freshness_seconds": 0, "last_error": null, "details": {"items": []}}
   },
-  "card_order": ["hermes", "telegram", "gbrain", "workflows", "alerts"]
+  "card_order": ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"]
 }
 ```
 

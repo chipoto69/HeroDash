@@ -20,7 +20,7 @@ Every card must read from a real source, carry freshness metadata, and surface f
    - `last_error`
 4. Stale data must render as stale, not healthy.
 5. Dashboard code should aggregate a normalized model, not read thirty unrelated cache shapes directly.
-6. Telegram, Hermes, GBrain, and WORKFLOWS are first-class sources. Old NATS toy state is not.
+6. Telegram, Hermes, Factory Droids, GBrain, and WORKFLOWS are first-class sources. Old NATS toy state is not.
 
 ## Canonical top-level shape
 
@@ -30,60 +30,85 @@ Every card must read from a real source, carry freshness metadata, and surface f
     "timestamp": "2026-04-22T00:00:00Z",
     "environment": "local-dev",
     "mode": "production",
-    "version": "hero-v2"
+    "version": "hero-reboot-v1"
   },
-  "system": {
-    "status": "healthy|degraded|down|stale",
-    "source": "local-probes",
-    "timestamp": "...",
-    "freshness_seconds": 4,
-    "last_error": null
+  "cards": {
+    "hermes": {
+      "status": "healthy|degraded|down|stale",
+      "source": "local-process+ports",
+      "timestamp": "...",
+      "freshness_seconds": 8,
+      "last_error": null,
+      "details": {
+        "gateway_processes": 1,
+        "webapi_port_up": true,
+        "workspace_ui_port_up": true,
+        "tracked_profiles": []
+      }
+    },
+    "droids": {
+      "status": "healthy|degraded|down|stale",
+      "source": "factory-settings+droid-binary+local-bridge",
+      "timestamp": "...",
+      "freshness_seconds": 8,
+      "last_error": null,
+      "details": {
+        "droid_binary_exists": true,
+        "droid_version": "0.109.3",
+        "hermes_models": [],
+        "bridge_port": 8645,
+        "bridge_port_up": true
+      }
+    },
+    "telegram": {
+      "status": "healthy|degraded|down|stale",
+      "source": "profile-config+gateway-process+wiki-canon",
+      "timestamp": "...",
+      "freshness_seconds": 12,
+      "last_error": null,
+      "details": {
+        "profiles": [],
+        "topics": [],
+        "gateway_running": true
+      }
+    },
+    "gbrain": {
+      "status": "healthy|degraded|down|stale",
+      "source": "hermes-mcp-config+brain-repo+endpoint-probe",
+      "timestamp": "...",
+      "freshness_seconds": 15,
+      "last_error": null,
+      "details": {
+        "endpoint": "https://example.invalid/mcp",
+        "endpoint_reachable": true,
+        "brain_repo_exists": true
+      }
+    },
+    "workflows": {
+      "status": "healthy|degraded|down|stale",
+      "source": "repo-state+lane-counts",
+      "timestamp": "...",
+      "freshness_seconds": 20,
+      "last_error": null,
+      "details": {
+        "root": "...",
+        "branch": "main",
+        "lanes": []
+      }
+    },
+    "alerts": {
+      "status": "healthy|degraded|down|stale",
+      "source": "hero-aggregator",
+      "timestamp": "...",
+      "freshness_seconds": 3,
+      "last_error": null,
+      "details": {
+        "count": 0,
+        "items": []
+      }
+    }
   },
-  "gateway": {
-    "status": "healthy|degraded|down|stale",
-    "source": "hermes-runtime",
-    "timestamp": "...",
-    "freshness_seconds": 8,
-    "last_error": null,
-    "profiles": [],
-    "sessions": []
-  },
-  "telegram": {
-    "status": "healthy|degraded|down|stale",
-    "source": "telegram-gateway",
-    "timestamp": "...",
-    "freshness_seconds": 12,
-    "last_error": null,
-    "topics": [],
-    "lane_activity": []
-  },
-  "memory": {
-    "status": "healthy|degraded|down|stale",
-    "source": "gbrain-mcp",
-    "timestamp": "...",
-    "freshness_seconds": 15,
-    "last_error": null,
-    "recent_writes": [],
-    "query_latency_ms": null
-  },
-  "workflows": {
-    "status": "healthy|degraded|down|stale",
-    "source": "workflows-repo",
-    "timestamp": "...",
-    "freshness_seconds": 20,
-    "last_error": null,
-    "lanes": [],
-    "packets": {},
-    "runs": []
-  },
-  "alerts": {
-    "status": "healthy|degraded|down|stale",
-    "source": "hero-aggregator",
-    "timestamp": "...",
-    "freshness_seconds": 3,
-    "last_error": null,
-    "items": []
-  }
+  "card_order": ["hermes", "droids", "telegram", "gbrain", "workflows", "alerts"]
 }
 ```
 
@@ -108,12 +133,12 @@ Every card must read from a real source, carry freshness metadata, and surface f
 
 ## Freshness thresholds
 
-- system: 15s
-- gateway: 30s
-- telegram: 60s
-- memory: 120s
-- workflows: 120s
-- alerts: 15s
+- hermes: 60s
+- droids: 60s
+- telegram: 7d
+- gbrain: 24h
+- workflows: 14d
+- alerts: 60s
 
 These are defaults, not religion.
 
@@ -137,10 +162,11 @@ The aggregator composes these into the top-level dashboard object.
 ## Source-of-truth priorities
 
 1. Hermes runtime / gateway
-2. Telegram operator surface
-3. GBrain / Supabase-backed memory layer
-4. WORKFLOWS repo artifacts
-5. local process and scheduler state
+2. Factory Droid / local Hermes bridge surface
+3. Telegram operator surface
+4. GBrain / Supabase-backed memory layer
+5. WORKFLOWS repo artifacts
+6. local process and scheduler state
 
 Legacy cache files are transitional inputs only. They are not the long-term contract.
 
@@ -168,12 +194,13 @@ Good:
 
 ## First honest slice
 
-The first reboot slice should only expose five cards:
+The first reboot slice should only expose the operator-critical cards:
 
 1. Hermes
-2. Telegram
-3. GBrain
-4. WORKFLOWS
-5. Alerts
+2. Factory Droids
+3. Telegram
+4. GBrain
+5. WORKFLOWS
+6. Alerts
 
 Everything else can come back only if it proves it is real.

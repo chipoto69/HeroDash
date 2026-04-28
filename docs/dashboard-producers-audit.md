@@ -124,16 +124,11 @@ These at least probe something real or consume measurable system state.
 
 ### C. Stale-but-salvageable components — keep logic, replace source model
 
-#### `web_dashboard_mono.py`
-- best reboot base
-- good: boots cleanly, simple operator surface, easy to rewire
-- bad: still centered on `dynamic_agents.json`, `communication_layer_status.json`, `nats_status.json`
-- verdict: keep UI shell, replace data assumptions
-
 #### `web_dashboard.py`
-- good: proven FastAPI surface
-- bad: hardcoded healthy system fields and old analytics worldview
-- verdict: do not use as reboot base; mine for UI/API ideas only
+- current Phase 0 reboot base
+- good: FastAPI/Jinja surface, normalized probes, `/api/status`, `/api/healthz`, and `/api/readiness`
+- bad: still shares the repo with several legacy dashboard paths, so launch docs must stay explicit
+- verdict: canonical web reboot path
 
 #### `tui_dashboard.py`
 - reads multiple cache files but does not solve truth-layer issues
@@ -201,8 +196,8 @@ Source should be aggregated failures/stale states from the other adapters.
 - synthetic registry writers
 
 ### Keep and rewire
-- `web_dashboard_mono.py`
-- `web_templates/dashboard_mono.html`
+- `web_dashboard.py`
+- `web_templates/dashboard.html`
 - any genuinely useful probe logic from token/session, LangSmith, Graphiti, and local process monitors
 
 ### Build next
@@ -218,6 +213,6 @@ Create a new adapter layer instead of teaching templates about random cache file
 
 Do not start by fixing every legacy producer.
 
-Start by making `web_dashboard_mono.py` ignore them.
+Start by making `web_dashboard.py` ignore them.
 Then feed it one normalized payload built from the new adapters.
 That gets Hero honest fast instead of preserving the whole haunted house.
