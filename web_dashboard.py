@@ -861,7 +861,7 @@ def status_weight(status: str) -> int:
 
 def discover_skill_inventory(limit: int = 60) -> list[dict[str, Any]]:
     now = time.monotonic()
-    if SKILL_CACHE["items"] and now - SKILL_CACHE["timestamp"] < 300:
+    if SKILL_CACHE["timestamp"] and now - SKILL_CACHE["timestamp"] < 300:
         return SKILL_CACHE["items"][:limit]
 
     inventory: list[dict[str, Any]] = []
