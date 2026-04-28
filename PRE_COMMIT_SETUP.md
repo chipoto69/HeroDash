@@ -41,12 +41,8 @@ The pre-commit hooks run the following checks:
 
 ## Documentation
 
-See [PRE_COMMIT_SETUP.md](./PRE_COMMIT_SETUP.md) for complete documentation including:
-- Detailed hook descriptions
-- Installation instructions
-- Usage examples
-- Troubleshooting guide
-- Configuration customization
+For more information on pre-commit, see the [official documentation](https://pre-commit.com/).
+
 
 ## Bypassing Hooks (Emergency Only)
 
