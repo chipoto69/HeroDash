@@ -15,10 +15,11 @@ A lot of legacy docs and muscle memory still point at “optimized dashboard” 
 ## Reboot-first usage
 
 ```bash
-./launch_web_dashboard.sh start
+./launch_web_dashboard.sh start      # background daemon for normal ops/smoke checks
 ./launch_web_dashboard.sh status
 ./launch_web_dashboard.sh logs
 ./launch_web_dashboard.sh stop
+./launch_web_dashboard.sh foreground # attached interactive run
 ```
 
 Direct launch:
@@ -55,9 +56,11 @@ Added as primary framing:
 
 ```bash
 python3 -m py_compile web_dashboard.py
-pytest -q tests/test_web_dashboard_reboot.py
+pytest -q tests/test_web_dashboard_reboot.py tests/test_launcher_contract.py
+./launch_web_dashboard.sh start
 curl http://127.0.0.1:8080/api/healthz
 curl http://127.0.0.1:8080/api/readiness
+./launch_web_dashboard.sh stop
 ```
 
 ## Legacy note

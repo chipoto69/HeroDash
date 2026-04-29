@@ -148,6 +148,7 @@ pid_matches_dashboard() {
 
 # Start web dashboard
 start_web_dashboard() {
+    local attached="${1:-false}"
     log "Starting Hero Web Dashboard..."
     
     # Set environment variables
@@ -183,7 +184,11 @@ start_web_dashboard() {
         echo "  Readiness:      http://localhost:$HERO_DASHBOARD_PORT/api/readiness"
         echo ""
         echo -e "${GREEN}Dashboard is running with honest subsystem probes${NC}"
-        echo -e "${YELLOW}Press Ctrl+C to stop or use './launch_web_dashboard.sh stop'${NC}"
+        if [[ "$attached" == "true" ]]; then
+            echo -e "${YELLOW}Press Ctrl+C to stop or use './launch_web_dashboard.sh stop'${NC}"
+        else
+            echo "Use './launch_web_dashboard.sh status' to inspect it, or './launch_web_dashboard.sh stop' to stop it"
+        fi
         
         return 0
     else
@@ -334,7 +339,8 @@ usage() {
     echo "Usage: $0 [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  start       Start web dashboard (default)"
+    echo "  start       Start web dashboard in the background (default)"
+    echo "  foreground  Start web dashboard and keep it attached until Ctrl+C"
     echo "  stop        Stop web dashboard"
     echo "  restart     Restart web dashboard"
     echo "  status      Show dashboard status"
@@ -392,8 +398,14 @@ main() {
             create_directories
             check_dependencies
             check_agent_status
-            if start_web_dashboard; then
-                # Keep script running in foreground
+            start_web_dashboard
+            ;;
+        foreground)
+            header
+            create_directories
+            check_dependencies
+            check_agent_status
+            if start_web_dashboard true; then
                 echo ""
                 echo -e "${GREEN}Web dashboard is running. Press Ctrl+C to stop.${NC}"
                 wait
@@ -423,7 +435,7 @@ main() {
             check_dependencies
             check_agent_status
             start_analytics
-            if start_web_dashboard; then
+            if start_web_dashboard true; then
                 open_browser
                 echo ""
                 echo -e "${GREEN}Full Hero dashboard stack running. Press Ctrl+C to stop.${NC}"
