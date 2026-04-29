@@ -77,7 +77,7 @@ Requirements:
   - `~/ORGANIZED/ACTIVE_PROJECTS/ARSENAL/WORKFLOWS`
   - `~/wiki/queries/grok420system.md`
 
-Start the dashboard:
+Start the dashboard in the background:
 
 ```bash
 ./launch_web_dashboard.sh start
@@ -89,6 +89,12 @@ Other useful commands:
 ./launch_web_dashboard.sh status
 ./launch_web_dashboard.sh logs
 ./launch_web_dashboard.sh stop
+```
+
+For an attached interactive run, use:
+
+```bash
+./launch_web_dashboard.sh foreground
 ```
 
 You can also run the app directly:
@@ -138,7 +144,7 @@ Status semantics:
 
 ```bash
 python3 -m py_compile web_dashboard.py
-pytest -q tests/test_web_dashboard_reboot.py
+pytest -q tests/test_web_dashboard_reboot.py tests/test_launcher_contract.py
 bash -n launch_web_dashboard.sh
 ```
 
